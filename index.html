@@ -3,58 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>안무 유사도 분석기 (TensorFlow.js + Google Sheets)</title>
+    <title>안무 유사도 분석기 & 성장 기록</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
-        h1 { text-align: center; }
-        .container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
-        .box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 400px; }
-        video { width: 100%; border-radius: 4px; background: #000; margin-top: 10px; }
-        .control-panel { text-align: center; margin-top: 20px; }
-        button { background: #4f46e5; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; }
-        button:hover { background: #4338ca; }
-        button:disabled { background: #a5b4fc; cursor: not-allowed; }
-        #result-box { text-align: center; font-size: 24px; font-weight: bold; margin-top: 20px; color: #4f46e5; }
+        /* 모바일 퍼스트 및 전반적인 레이아웃 기본 설정 */
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; 
+            padding: 15px; 
+            background: #f4f4f9; 
+            color: #333; 
+        }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
+        h2, h3, h4 { margin-top: 0; }
+
+        /* 비디오 컨테이너 (반응형 플렉스박스) */
+        .container { 
+            display: flex; 
+            gap: 15px; 
+            justify-content: center; 
+            flex-wrap: wrap; 
+            margin-bottom: 20px; 
+        }
         
-        /* 점수 저장 패널 스타일 */
-        #save-panel {
-            display: none; /* 분석 완료 후 표시 */
+        /* 개별 카드 박스 (PC 기준 가로 400px, 모바일에서는 100% 꽉 참) */
+        .box { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 400px; 
+        }
+
+        /* 비디오 크기 자동 조절 */
+        video { 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 16 / 9; /* 모바일에서 깨지지 않는 16:9 비율 고정 */
+            border-radius: 8px; 
+            background: #000; 
+            margin-top: 10px; 
+            object-fit: cover;
+        }
+
+        /* 파일 업로드 버튼 스타일링 개선 */
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin-top: 5px;
+        }
+
+        /* 컨트롤 및 공통 패널 */
+        .control-panel { text-align: center; margin: 20px 0; }
+        
+        .panel {
             background: white;
-            max-width: 400px;
+            width: 100%;
+            max-width: 835px; /* PC에서 비디오 박스 2개 너비와 조화롭게 맞춤 */
             margin: 20px auto;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             text-align: center;
         }
-        #save-panel input {
-            width: 80%;
-            padding: 10px;
+        #save-panel { display: none; }
+
+        /* 입력창 및 셀렉트박스 모바일 맞춤 */
+        .panel input, .panel select {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px;
             margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px; /* 모바일에서 폰트가 16사 미만이면 자동 확대되는 현상 방지 */
         }
-        #save-btn { background: #10b981; margin-top: 5px; }
+
+        /* 터치하기 편한 큼직한 버튼 디자인 */
+        button { 
+            background: #4f46e5; 
+            color: white; 
+            border: none; 
+            padding: 14px 24px; 
+            font-size: 16px; 
+            font-weight: bold;
+            border-radius: 8px; 
+            cursor: pointer; 
+            width: 100%;
+            max-width: 400px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #4338ca; }
+        button:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+        #save-btn { background: #10b981; }
         #save-btn:hover { background: #059669; }
+        
+        #result-box { 
+            text-align: center; 
+            font-size: 20px; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            color: #4f46e5; 
+        }
+        
         #save-status { margin-top: 10px; font-size: 14px; color: #555; }
 
-        /* 반응형 모바일 대응 */
-        @media(max-width: 850px) {
-            .container { flex-direction: column; align-items: center; }
-            .box, #save-panel { width: 100%; max-width: 400px; box-sizing: border-box; }
+        /* 그래프 캔버스 영역 */
+        canvas { 
+            width: 100% !important; 
+            height: auto !important; 
+            max-height: 300px;
+            margin-top: 15px; 
+        }
+
+        /* 미디어 쿼리: 화면이 넓은 PC 환경에서는 버튼 크기를 내용물에 맞게 조절 */
+        @media(min-width: 768px) {
+            button { width: auto; min-width: 200px; }
         }
     </style>
 
-    <!-- TensorFlow.js 및 MoveNet 필수 라이브러리 로드 -->
+    <!-- TensorFlow.js, MoveNet 및 Chart.js 라이브러리 로드 -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-    <h1>댄스 유사도 분석 (브라우저 AI)</h1>
+    <h1>댄스 유사도 분석 & 성장 기록</h1>
 
     <div class="container">
         <!-- 원본 영상 영역 -->
@@ -78,13 +161,25 @@
     </div>
 
     <!-- 분석 완료 후 나타나는 구글 시트 저장 창 -->
-    <div id="save-panel">
+    <div id="save-panel" class="panel">
         <h4>📊 연습 기록 저장하기</h4>
-        <p style="font-size: 14px; color: #666;">같은 곡 이름으로 입력하면 나중에 그래프로 묶어볼 수 있습니다.</p>
+        <p style="font-size: 14px; color: #666;">연습한 곡(무리) 이름을 입력하거나 선택하세요.</p>
         <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
         <br>
         <button id="save-btn">구글 시트에 저장하기</button>
         <div id="save-status"></div>
+    </div>
+
+    <!-- 날짜별 점수 변화 그래프 패널 -->
+    <div class="panel">
+        <h4>📈 나의 실력 성장 그래프</h4>
+        <div style="margin-bottom: 10px;">
+            <label for="group-select" style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px;">조회할 곡 선택: </label>
+            <select id="group-select">
+                <option value="">-- 곡을 선택하세요 --</option>
+            </select>
+        </div>
+        <canvas id="scoreChart"></canvas>
     </div>
 
     <script src="script.js"></script>
