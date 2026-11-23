@@ -250,6 +250,11 @@ h3, h4, h5 {
     text-align: center;
 }
 
+/* 그래프 탭 전용 넓은 패널 */
+.graph-panel {
+    max-width: 1040px;
+}
+
 .panel-desc {
     font-size: 14px;
     color: #94a3b8;
@@ -490,19 +495,25 @@ h3, h4, h5 {
     gap: 6px;
 }
 
-#scoreChart {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 360px;
-    margin-top: 12px;
+/* 크기를 키운 그래프 전용 컨테이너 */
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    margin-top: 16px;
     background-color: #0f172a;
-    padding: 10px;
-    border-radius: 8px;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid #334155;
 }
 
 @media (min-width: 768px) {
     .main-btn {
         width: auto;
         min-width: 220px;
+    }
+    .chart-container {
+        height: 480px;
+        padding: 20px;
     }
 }

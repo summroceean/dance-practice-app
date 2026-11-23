@@ -201,7 +201,6 @@ existingGroupSelect.addEventListener('change', (e) => {
 // [엄격 채점 알고리즘 엔진] 기하학적 각도 + 신체 비율 정규화 + 속도 동기화
 // =========================================================================
 
-// 세 점(A-B-C) 사이의 관절 꺾임 각도(0~180도) 계산
 function calculateAngle(a, b, c) {
     const ab = { x: a.x - b.x, y: a.y - b.y };
     const cb = { x: c.x - b.x, y: c.y - b.y };
@@ -213,36 +212,31 @@ function calculateAngle(a, b, c) {
     return (Math.acos(cosTheta) * 180) / Math.PI;
 }
 
-// 두 점 사이 유클리드 거리
 function dist(p1, p2) {
     return Math.hypot(p1.x - p2.x, p1.y - p2.y);
 }
 
-// 엄격한 오차 점수 변환 (오차가 클수록 점수가 급격히 하락하는 지수 감쇠 적용)
 function strictScoreFromDiff(diff, tolerance) {
     const ratio = diff / tolerance;
     const raw = 100 * Math.exp(-0.65 * ratio * ratio);
     return Math.max(0, Math.min(100, raw));
 }
 
-// 1. 손 / 상체 라인 채점 (팔꿈치 각도, 겨드랑이 벌림 각도, 어깨 대비 손목 상대 위치)
+// 1. 손 / 상체 라인 채점
 function evaluateHandScore(refKp, userKp) {
     const refScale = Math.max(dist(refKp[5], refKp[6]), 1);
     const userScale = Math.max(dist(userKp[5], userKp[6]), 1);
 
-    // 팔꿈치 굽힘 각도 (왼쪽 5-7-9, 오른쪽 6-8-10)
     const refLeftElbow = calculateAngle(refKp[5], refKp[7], refKp[9]);
     const userLeftElbow = calculateAngle(userKp[5], userKp[7], userKp[9]);
     const refRightElbow = calculateAngle(refKp[6], refKp[8], refKp[10]);
     const userRightElbow = calculateAngle(userKp[6], userKp[8], userKp[10]);
 
-    // 겨드랑이 각도 (골반-어깨-팔꿈치: 11-5-7, 12-6-8)
     const refLeftShoulder = calculateAngle(refKp[11], refKp[5], refKp[7]);
     const userLeftShoulder = calculateAngle(userKp[11], userKp[5], userKp[7]);
     const refRightShoulder = calculateAngle(refKp[12], refKp[6], refKp[8]);
     const userRightShoulder = calculateAngle(userKp[12], userKp[6], userKp[8]);
 
-    // 어깨 중심 대비 손목 정규화 위치 오차
     const refLeftWristRel = { x: (refKp[9].x - refKp[5].x) / refScale, y: (refKp[9].y - refKp[5].y) / refScale };
     const userLeftWristRel = { x: (userKp[9].x - userKp[5].x) / userScale, y: (userKp[9].y - userKp[5].y) / userScale };
     const refRightWristRel = { x: (refKp[10].x - refKp[6].x) / refScale, y: (refKp[10].y - refKp[6].y) / refScale };
@@ -260,32 +254,28 @@ function evaluateHandScore(refKp, userKp) {
         dist(refRightWristRel, userRightWristRel)
     ) / 2;
 
-    const angleScore = strictScoreFromDiff(angleDiff, 24); // 허용 오차 24도
-    const posScore = strictScoreFromDiff(posDiff, 0.45);  // 허용 오차 어깨너비의 45%
+    const angleScore = strictScoreFromDiff(angleDiff, 24);
+    const posScore = strictScoreFromDiff(posDiff, 0.45);
 
-    // 관절 신뢰도 페널티
     const minConf = Math.min(refKp[9].score, refKp[10].score, userKp[9].score, userKp[10].score);
     const confPenalty = minConf < 0.35 ? 0.75 : 1.0;
 
     return (angleScore * 0.6 + posScore * 0.4) * confPenalty;
 }
 
-// 2. 발 / 하체 스텝 채점 (무릎 굽힘 각도, 고관절 벌림, 골반 대비 발목 보폭 비율)
+// 2. 발 / 하체 스텝 채점
 function evaluateFootScore(refKp, userKp) {
     const refHipWidth = Math.max(dist(refKp[11], refKp[12]), 1);
     const userHipWidth = Math.max(dist(userKp[11], userKp[12]), 1);
 
-    // 무릎 각도 (11-13-15, 12-14-16)
     const refLeftKnee = calculateAngle(refKp[11], refKp[13], refKp[15]);
     const userLeftKnee = calculateAngle(userKp[11], userKp[13], userKp[15]);
     const refRightKnee = calculateAngle(refKp[12], refKp[14], refKp[16]);
     const userRightKnee = calculateAngle(userKp[12], userKp[14], userKp[16]);
 
-    // 양 발목 간 보폭 비율 (골반 너비 대비)
     const refStance = dist(refKp[15], refKp[16]) / refHipWidth;
     const userStance = dist(userKp[15], userKp[16]) / userHipWidth;
 
-    // 골반 중심 대비 발목 상대 위치
     const refHipCenter = { x: (refKp[11].x + refKp[12].x) / 2, y: (refKp[11].y + refKp[12].y) / 2 };
     const userHipCenter = { x: (userKp[11].x + userKp[12].x) / 2, y: (userKp[11].y + userKp[12].y) / 2 };
 
@@ -308,24 +298,20 @@ function evaluateFootScore(refKp, userKp) {
     return (kneeScore * 0.4 + stanceScore * 0.3 + posScore * 0.3) * confPenalty;
 }
 
-// 3. 표정 / 시선 처리 채점 (고개 기울기, 시선 방향, 얼굴 포인트 역동성)
+// 3. 표정 / 시선 처리 채점
 function evaluateFaceScore(refKp, userKp) {
-    // 코(0), 왼쪽 눈(1), 오른쪽 눈(2), 왼쪽 귀(3), 오른쪽 귀(4)
     const refEyeCenter = { x: (refKp[1].x + refKp[2].x) / 2, y: (refKp[1].y + refKp[2].y) / 2 };
     const userEyeCenter = { x: (userKp[1].x + userKp[2].x) / 2, y: (userKp[1].y + userKp[2].y) / 2 };
 
     const refEarDist = Math.max(dist(refKp[3], refKp[4]), 1);
     const userEarDist = Math.max(dist(userKp[3], userKp[4]), 1);
 
-    // 고개 좌우 회전 비율 (코와 양쪽 귀 거리 비율)
     const refYaw = (dist(refKp[0], refKp[3]) - dist(refKp[0], refKp[4])) / refEarDist;
     const userYaw = (dist(userKp[0], userKp[3]) - dist(userKp[0], userKp[4])) / userEarDist;
 
-    // 고개 상하 끄덕임 비율 (코와 눈 중심 y축 차이)
     const refPitch = (refKp[0].y - refEyeCenter.y) / refEarDist;
     const userPitch = (userKp[0].y - userEyeCenter.y) / userEarDist;
 
-    // 고개 갸우뚱 기울기 각도 (양 눈의 수평 각도)
     const refRoll = Math.atan2(refKp[2].y - refKp[1].y, refKp[2].x - refKp[1].x) * (180 / Math.PI);
     const userRoll = Math.atan2(userKp[2].y - userKp[1].y, userKp[2].x - userKp[1].x) * (180 / Math.PI);
 
@@ -339,14 +325,13 @@ function evaluateFaceScore(refKp, userKp) {
     return (yawScore * 0.4 + pitchScore * 0.3 + rollScore * 0.3) * confPenalty;
 }
 
-// 4. 박자 / 리듬 동기화 채점 (프레임 간 주요 관절 속도 변화량 비교)
+// 4. 박자 / 리듬 동기화 채점
 function evaluateRhythmScore(prevRefKp, currRefKp, prevUserKp, currUserKp) {
-    if (!prevRefKp || !prevUserKp) return 80; // 첫 프레임 기본 기준
+    if (!prevRefKp || !prevUserKp) return 80;
 
     const refScale = Math.max(dist(currRefKp[5], currRefKp[6]), 1);
     const userScale = Math.max(dist(currUserKp[5], currUserKp[6]), 1);
 
-    // 손목(9, 10)과 발목(15, 16)의 순간 이동 속도(운동량) 계산
     const trackIndices = [9, 10, 15, 16];
     let refVelocity = 0;
     let userVelocity = 0;
@@ -356,16 +341,13 @@ function evaluateRhythmScore(prevRefKp, currRefKp, prevUserKp, currUserKp) {
         userVelocity += dist(prevUserKp[idx], currUserKp[idx]) / userScale;
     });
 
-    // 멈춰야 할 때 움직이거나, 강하게 쳐야 할 때 약하게 움직이면 감점
     const velocityDiff = Math.abs(refVelocity - userVelocity);
     return strictScoreFromDiff(velocityDiff, 0.55);
 }
 
-// 세부 점수와 시간대별 취약 구간을 바탕으로 상세 코칭 조언 생성
 function generateDetailedAdvice(scores, weakMoments) {
     const advice = [];
 
-    // 1. 종합 총평
     if (scores.total >= 88) {
         advice.push("<strong>[총평]</strong> 원곡 안무의 디테일과 박자 감각이 매우 뛰어납니다. 강약 조절(다이내믹)만 더 극대화하면 무대 완성도가 완벽해집니다.");
     } else if (scores.total >= 72) {
@@ -374,35 +356,30 @@ function generateDetailedAdvice(scores, weakMoments) {
         advice.push("<strong>[총평]</strong> 아직 동작의 큰 틀을 흉내 내는 단계입니다. 0.75배속으로 구간을 쪼개어 관절의 정확한 각도와 멈춤 동작(아이솔레이션)부터 다시 연습하세요.");
     }
 
-    // 2. 손 / 상체 피드백
     if (scores.hand < 75) {
         advice.push(`<strong>[손 / 상체 교정 - ${scores.hand}점]</strong> 팔꿈치 굽힘 각도와 손목의 최종 도달 위치가 원본과 다릅니다. 팔을 뻗을 때 어깨가 함께 올라가지 않도록 고정하고, 손끝까지 텐션을 유지해 정확한 각도에서 동작을 끊어주세요.`);
     } else {
         advice.push(`<strong>[손 / 상체 양호 - ${scores.hand}점]</strong> 상체 라인과 팔 각도가 안정적입니다. 동작 전환 시 손목 스냅의 속도를 조금 더 높이면 훨씬 깔끔해집니다.`);
     }
 
-    // 3. 발 / 스텝 피드백
     if (scores.foot < 75) {
         advice.push(`<strong>[발 / 스텝 교정 - ${scores.foot}점]</strong> 하체 무게중심이 높고 보폭이 원본보다 좁습니다. 무릎을 조금 더 굽혀 코어 중심을 낮추고, 스텝을 밟을 때 골반 너비 대비 보폭을 넓게 써서 안정감을 확보하세요.`);
     } else {
         advice.push(`<strong>[발 / 스텝 양호 - ${scores.foot}점]</strong> 하체 스텝과 무게중심 이동이 정확합니다. 발이 바닥에 닿는 순간 무릎 바운스를 살려주면 그루브가 더 살아납니다.`);
     }
 
-    // 4. 박자 / 리듬 피드백
     if (scores.rhythm < 75) {
         advice.push(`<strong>[박자 / 리듬 교정 - ${scores.rhythm}점]</strong> 원본 댄서의 가속도 타이밍과 박자가 엇갈리고 있습니다. 동작을 크게 하려다 박자가 반 박자씩 밀리는 경향이 있으므로, 정박에 정확히 동작이 '멈추는(Hit)' 타이밍에 집중하세요.`);
     } else {
         advice.push(`<strong>[박자 / 리듬 양호 - ${scores.rhythm}점]</strong> 음악의 강약과 관절의 가속 타이밍이 잘 동기화되어 있습니다.`);
     }
 
-    // 5. 표정 / 시선 처리 피드백
     if (scores.face < 75) {
         advice.push(`<strong>[표정 / 시선 교정 - ${scores.face}점]</strong> 동작을 신경 쓰느라 시선이 바닥이나 거울 한곳에만 고정되어 있습니다. 안무 방향에 맞춰 고개 각도(턱선)와 시선을 함께 전환해야 표정 연기와 무대 몰입도가 살아납니다.`);
     } else {
         advice.push(`<strong>[표정 / 시선 양호 - ${scores.face}점]</strong> 시선 처리와 고개 리듬이 안무의 흐름과 자연스럽게 어우러집니다.`);
     }
 
-    // 6. 가장 오차가 컸던 특정 시간대(초) 안내
     if (weakMoments.length > 0) {
         weakMoments.sort((a, b) => a.score - b.score);
         const worst = weakMoments.slice(0, 2).map(m => `${m.time.toFixed(1)}초(${m.weakestArea})`).join(", ");
@@ -428,7 +405,7 @@ function seekVideo(video, time) {
 }
 
 // =========================================================================
-// 1. 정밀 유사도 분석 실행 (0.35초 단위 고밀도 샘플링)
+// 1. 정밀 유사도 분석 실행
 // =========================================================================
 analyzeBtn.addEventListener('click', async () => {
     if (!refVideo.src || !userVideo.src) {
@@ -448,7 +425,7 @@ analyzeBtn.addEventListener('click', async () => {
         const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
 
         const duration = Math.min(refVideo.duration || 5, userVideo.duration || 5, 20);
-        const step = 0.35; // 더 촘촘한 0.35초 간격 분석
+        const step = 0.35;
 
         let sumHand = 0, sumFoot = 0, sumRhythm = 0, sumFace = 0;
         let validFrames = 0;
@@ -496,7 +473,6 @@ analyzeBtn.addEventListener('click', async () => {
                 sumFace += faceScore;
                 validFrames++;
 
-                // 현재 프레임에서 가장 취약한 영역 기록
                 const frameAvg = (hScore + fScore + rScore + faceScore) / 4;
                 const areaMap = [
                     { name: "손/상체", val: hScore },
@@ -522,12 +498,10 @@ analyzeBtn.addEventListener('click', async () => {
             const rhythm = Math.round(sumRhythm / validFrames);
             const face = Math.round(sumFace / validFrames);
 
-            // 가중치 기반 종합 점수 (손 30%, 발 30%, 박자 25%, 표정 15%)
             const total = Math.round(hand * 0.30 + foot * 0.30 + rhythm * 0.25 + face * 0.15);
 
             latestScores = { total, hand, foot, rhythm, face };
 
-            // 리포트 UI 반영
             scoreTotalEl.innerText = `${total}점`;
             gradeBadgeEl.innerText = getGradeBadge(total);
 
@@ -541,7 +515,6 @@ analyzeBtn.addEventListener('click', async () => {
             barRhythmEl.style.width = `${rhythm}%`;
             barFaceEl.style.width = `${face}%`;
 
-            // 세부 조언 렌더링
             const adviceItems = generateDetailedAdvice(latestScores, weakMoments);
             adviceListEl.innerHTML = adviceItems.map(item => `<li>${item}</li>`).join("");
 
@@ -600,7 +573,6 @@ saveBtn.addEventListener('click', async () => {
     }
 });
 
-// 곡 이름 수정
 renameGroupBtn.addEventListener('click', async () => {
     const oldName = groupSelect.value;
     if (!oldName) return;
@@ -629,7 +601,6 @@ renameGroupBtn.addEventListener('click', async () => {
     }
 });
 
-// 곡 기록 삭제
 deleteGroupBtn.addEventListener('click', async () => {
     const targetGroup = groupSelect.value;
     if (!targetGroup) return;
@@ -660,7 +631,6 @@ deleteGroupBtn.addEventListener('click', async () => {
     }
 });
 
-// 기록 불러오기 및 드롭다운 갱신
 async function fetchRecordsAndSetupDropdown() {
     if (APPS_SCRIPT_URL.includes("여기에_본인_스크립트_ID_입력")) return;
 
@@ -699,7 +669,7 @@ async function fetchRecordsAndSetupDropdown() {
 }
 
 // =========================================================================
-// 3. 다중 세부 지표 성장 그래프 (Chart.js)
+// 3. 크기를 키우고 작은 점으로 다듬은 다중 세부 지표 성장 그래프 (Chart.js)
 // =========================================================================
 function renderChart(selectedGroup) {
     if (!selectedGroup) {
@@ -721,8 +691,8 @@ function renderChart(selectedGroup) {
             label: "종합 점수",
             data: filtered.map(r => r.total),
             borderColor: "#a78bfa",
-            backgroundColor: "rgba(167, 139, 250, 0.15)",
-            borderWidth: 3,
+            backgroundColor: "rgba(167, 139, 250, 0.12)",
+            borderWidth: 2.5,
             fill: true
         },
         hand: {
@@ -761,8 +731,11 @@ function renderChart(selectedGroup) {
 
     const datasets = activeMetrics.map(key => ({
         ...datasetConfig[key],
-        tension: 0.15,
-        pointRadius: 4
+        tension: 0.2,
+        pointRadius: 2.5,       // 평상시 깔끔한 작은 점
+        pointHoverRadius: 5,    // 마우스/터치 시 부드럽게 확대
+        pointBorderWidth: 1,
+        pointBackgroundColor: datasetConfig[key].borderColor
     }));
 
     if (scoreChart) scoreChart.destroy();
@@ -772,19 +745,46 @@ function renderChart(selectedGroup) {
         data: { labels, datasets },
         options: {
             responsive: true,
+            maintainAspectRatio: false, // 컨테이너 높이에 맞춰 크게 렌더링
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
             plugins: {
-                legend: { labels: { color: '#e2e8f0' } }
+                legend: {
+                    labels: {
+                        color: '#e2e8f0',
+                        padding: 16,
+                        font: { size: 13 }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                    titleColor: '#c4b5fd',
+                    bodyColor: '#f8fafc',
+                    borderColor: '#475569',
+                    borderWidth: 1,
+                    padding: 10
+                }
             },
             scales: {
                 x: {
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: '#1e293b' }
+                    ticks: {
+                        color: '#94a3b8',
+                        maxRotation: 30,
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(51, 65, 85, 0.4)' }
                 },
                 y: {
                     beginAtZero: true,
                     max: 100,
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: '#334155' }
+                    ticks: {
+                        color: '#94a3b8',
+                        stepSize: 20,
+                        font: { size: 12 }
+                    },
+                    grid: { color: 'rgba(51, 65, 85, 0.6)' }
                 }
             }
         }
