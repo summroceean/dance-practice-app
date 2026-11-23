@@ -15,37 +15,36 @@
   --text-sub: #94a3b8;
 }
 
+/* 전체 화면을 단일 중앙 컨테이너로 고정 */
 body {
   font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  padding: 16px;
+  min-height: 100vh;
+  width: 100%;
+  display: block; /* flex 중복 배치 방지 */
+  overflow-x: hidden;
+  padding: 20px;
 }
 
+/* 앱 전체 영역: 화면 가운데에 딱 하나만 배치 */
 .app-container {
   width: 100%;
-  max-width: 1300px;
-  height: 96vh;
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 
 /* 상단 헤더 */
 .app-header {
   text-align: center;
-  flex-shrink: 0;
 }
 
 .app-header h1 {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   margin-bottom: 4px;
   color: #c4b5fd;
   font-weight: 700;
@@ -54,19 +53,18 @@ body {
 
 .app-header p {
   color: var(--text-sub);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
-/* 메타 정보 입력 */
+/* 메타 정보 입력 (사용자 ID, 곡명) */
 .meta-section {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   background: var(--bg-card);
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-radius: 10px;
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
 }
 
 .input-group {
@@ -76,18 +74,18 @@ body {
 }
 
 .input-group label {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: #cbd5e1;
   font-weight: 600;
 }
 
 .input-group input {
-  padding: 6px 10px;
+  padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-main);
   color: var(--text-main);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -96,38 +94,36 @@ body {
   border-color: var(--primary-purple);
 }
 
-/* 좌우 나란히 배치되는 비디오 그리드 */
+/* 비디오 카드 2개만 좌우 대칭으로 배치 (왼쪽: 기준 영상 / 오른쪽: 사용자 영상) */
 .video-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  flex: 1;
-  min-height: 0;
+  width: 100%;
 }
 
 .video-card {
   background: var(--bg-card);
   border-radius: 12px;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  width: 100%;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  flex-shrink: 0;
+  margin-bottom: 10px;
   gap: 8px;
 }
 
 .card-header h2 {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: #e2e8f0;
-  white-space: nowrap; 
+  white-space: nowrap;
   font-weight: 600;
 }
 
@@ -140,14 +136,13 @@ body {
 .video-wrapper {
   position: relative;
   width: 100%;
-  flex: 1;
+  aspect-ratio: 16 / 9;
   background: #020617;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
 }
 
 video {
@@ -167,13 +162,12 @@ video {
   display: flex;
   justify-content: center;
   gap: 12px;
-  flex-shrink: 0;
 }
 
 .btn {
-  padding: 10px 20px;
+  padding: 10px 22px;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -220,10 +214,9 @@ video {
 /* 로딩 스피너 */
 .loading-section {
   text-align: center;
-  padding: 16px;
+  padding: 20px;
   background: var(--bg-card);
   border-radius: 10px;
-  flex-shrink: 0;
 }
 
 .spinner {
@@ -244,9 +237,8 @@ video {
 .result-section {
   background: var(--bg-card);
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
 }
 
 .result-section h2 {
@@ -309,5 +301,5 @@ video {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
