@@ -24,6 +24,9 @@ const refVideoFile = document.getElementById('ref-video-file');
 const userVideoFile = document.getElementById('user-video-file');
 const userCameraFile = document.getElementById('user-camera-file');
 
+const refDeleteBtn = document.getElementById('ref-delete-btn');
+const userDeleteBtn = document.getElementById('user-delete-btn');
+
 const refDropZone = document.getElementById('ref-drop-zone');
 const userDropZone = document.getElementById('user-drop-zone');
 
@@ -101,22 +104,63 @@ function clearCanvas(canvasElement) {
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 }
 
-// 영상 파일을 받아 비디오 래퍼를 표시하는 함수 (모바일/PC 공통)
-function loadVideoToPlayer(file, videoElement, dropZoneElement, wrapperElement, canvasElement) {
+// 영상 파일을 받아 비디오 래퍼와 삭제 버튼을 표시하는 함수
+function loadVideoToPlayer(file, videoElement, dropZoneElement, wrapperElement, canvasElement, deleteBtnElement) {
     if (!file || !file.type.startsWith('video/')) {
         alert("동영상 파일만 업로드할 수 있습니다.");
         return;
+    }
+    if (videoElement.src) {
+        URL.revokeObjectURL(videoElement.src);
     }
     videoElement.src = URL.createObjectURL(file);
     if (dropZoneElement) {
         dropZoneElement.style.display = "none";
     }
     wrapperElement.style.display = "block";
+    deleteBtnElement.style.display = "inline-block";
     clearCanvas(canvasElement);
 }
 
+// 올린 영상을 제거하고 초기 빈 상태로 되돌리는 함수
+function removeVideo(videoElement, dropZoneElement, wrapperElement, canvasElement, deleteBtnElement, fileInputs) {
+    videoElement.pause();
+    if (videoElement.src) {
+        URL.revokeObjectURL(videoElement.src);
+    }
+    videoElement.removeAttribute('src');
+    videoElement.load();
+
+    clearCanvas(canvasElement);
+    wrapperElement.style.display = "none";
+    deleteBtnElement.style.display = "none";
+
+    if (dropZoneElement) {
+        dropZoneElement.style.display = "flex";
+    }
+
+    fileInputs.forEach(input => {
+        input.value = "";
+    });
+
+    // 분석 결과 및 저장 패널 숨기기
+    currentScore = null;
+    resultBox.innerText = "";
+    resultBox.style.display = "none";
+    savePanel.style.display = "none";
+    saveStatus.innerText = "";
+}
+
+refDeleteBtn.addEventListener('click', () => {
+    removeVideo(refVideo, refDropZone, refVideoWrapper, refCanvas, refDeleteBtn, [refVideoFile]);
+});
+
+userDeleteBtn.addEventListener('click', () => {
+    removeVideo(userVideo, userDropZone, userVideoWrapper, userCanvas, userDeleteBtn, [userVideoFile, userCameraFile]);
+});
+
 // PC용 드래그 앤 드롭 설정
-function setupDropZone(dropZone, fileInput, videoElement, wrapperElement, canvasElement) {
+function setupDropZone(dropZone, fileInput, videoElement, wrapperElement, canvasElement, deleteBtnElement) {
     dropZone.addEventListener('click', () => fileInput.click());
 
     dropZone.addEventListener('dragover', (e) => {
@@ -132,24 +176,24 @@ function setupDropZone(dropZone, fileInput, videoElement, wrapperElement, canvas
         e.preventDefault();
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
-            loadVideoToPlayer(e.dataTransfer.files[0], videoElement, dropZone, wrapperElement, canvasElement);
+            loadVideoToPlayer(e.dataTransfer.files[0], videoElement, dropZone, wrapperElement, canvasElement, deleteBtnElement);
         }
     });
 }
 
-setupDropZone(refDropZone, refVideoFile, refVideo, refVideoWrapper, refCanvas);
-setupDropZone(userDropZone, userVideoFile, userVideo, userVideoWrapper, userCanvas);
+setupDropZone(refDropZone, refVideoFile, refVideo, refVideoWrapper, refCanvas, refDeleteBtn);
+setupDropZone(userDropZone, userVideoFile, userVideo, userVideoWrapper, userCanvas, userDeleteBtn);
 
 refVideoFile.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], refVideo, refDropZone, refVideoWrapper, refCanvas);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], refVideo, refDropZone, refVideoWrapper, refCanvas, refDeleteBtn);
 });
 
 userVideoFile.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone, userVideoWrapper, userCanvas);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone, userVideoWrapper, userCanvas, userDeleteBtn);
 });
 
 userCameraFile.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone, userVideoWrapper, userCanvas);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone, userVideoWrapper, userCanvas, userDeleteBtn);
 });
 
 refVideo.addEventListener('play', () => clearCanvas(refCanvas));
@@ -195,6 +239,8 @@ analyzeBtn.addEventListener('click', async () => {
         return;
     }
 
+    // 분석 시작을 눌렀을 때만 상태 문구 표시
+    resultBox.style.display = "block";
     resultBox.innerText = "AI 모델 로딩 중...";
     analyzeBtn.disabled = true;
     savePanel.style.display = "none";

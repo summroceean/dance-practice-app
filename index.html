@@ -31,15 +31,16 @@
         <div class="container">
             <!-- 1. 원본 안무 영상 -->
             <div class="box">
-                <h3>1. 원본 안무 영상</h3>
+                <div class="box-header">
+                    <h3>1. 원본 안무 영상</h3>
+                    <button type="button" id="ref-delete-btn" class="delete-btn">영상 삭제</button>
+                </div>
                 <input type="file" id="ref-video-file" accept="video/*" hidden>
                 
-                <!-- PC에서만 보이는 드롭존 (모바일에서는 CSS로 숨김) -->
                 <div id="ref-drop-zone" class="drop-zone">
                     <div>여기에 원본 영상 파일을 끌어다 놓거나<br>클릭해서 파일을 선택하세요</div>
                 </div>
                 
-                <!-- 비디오 + 관절 스켈레톤 오버레이 캔버스 -->
                 <div id="ref-video-wrapper" class="video-wrapper">
                     <video id="ref-video" controls muted playsinline></video>
                     <canvas id="ref-canvas" class="pose-canvas"></canvas>
@@ -52,16 +53,17 @@
 
             <!-- 2. 내 연습 영상 -->
             <div class="box">
-                <h3>2. 내 연습 영상</h3>
+                <div class="box-header">
+                    <h3>2. 내 연습 영상</h3>
+                    <button type="button" id="user-delete-btn" class="delete-btn">영상 삭제</button>
+                </div>
                 <input type="file" id="user-video-file" accept="video/*" hidden>
                 <input type="file" id="user-camera-file" accept="video/*" capture="user" hidden>
                 
-                <!-- PC에서만 보이는 드롭존 (모바일에서는 CSS로 숨김) -->
                 <div id="user-drop-zone" class="drop-zone">
                     <div>여기에 연습 영상 파일을 끌어다 놓거나<br>아래 버튼으로 촬영 또는 선택하세요</div>
                 </div>
                 
-                <!-- 비디오 + 관절 스켈레톤 오버레이 캔버스 -->
                 <div id="user-video-wrapper" class="video-wrapper">
                     <video id="user-video" controls muted playsinline></video>
                     <canvas id="user-canvas" class="pose-canvas"></canvas>
@@ -76,7 +78,8 @@
 
         <div class="control-panel">
             <button id="analyze-btn" class="main-btn">유사도 분석 시작</button>
-            <div id="result-box">분석 대기 중...</div>
+            <!-- 평소에는 숨겨져 있다가 분석 시작 시 나타나는 상태/결과 표시 영역 -->
+            <div id="result-box"></div>
         </div>
 
         <!-- 분석 완료 후 나타나는 저장 창 -->
