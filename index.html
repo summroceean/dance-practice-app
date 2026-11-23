@@ -6,7 +6,7 @@
     <title>KPOP 안무 연습 앱</title>
     <link rel="stylesheet" href="style.css">
 
-    <!-- TensorFlow.js, MoveNet 및 Chart.js 라이브러리 -->
+    <!-- TensorFlow.js, MoveNet 및 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
@@ -17,16 +17,16 @@
 
     <header class="app-header">
         <h1>KPOP 안무 연습 앱</h1>
-        <p class="subtitle">원본 안무와 내 연습 영상을 AI로 비교해 유사도 점수를 확인하고, 날짜별 실력 성장을 그래프로 기록해 보세요.</p>
+        <p class="subtitle">손, 발(스텝), 박자, 표정(시선)까지 5대 영역을 정밀 채점하고 맞춤형 코칭 피드백으로 실력을 완성하세요.</p>
     </header>
 
     <!-- 상단 탭 메뉴 -->
     <div class="tab-menu">
-        <button type="button" class="tab-btn active" data-target="tab-analyze">안무 유사도 분석</button>
+        <button type="button" class="tab-btn active" data-target="tab-analyze">안무 정밀 분석</button>
         <button type="button" class="tab-btn" data-target="tab-graph">성장 기록 그래프</button>
     </div>
 
-    <!-- 탭 1: 안무 유사도 분석 화면 -->
+    <!-- 탭 1: 안무 정밀 분석 화면 -->
     <div id="tab-analyze" class="tab-content active">
         <div class="container">
             <!-- 1. 원본 안무 영상 -->
@@ -77,23 +77,73 @@
         </div>
 
         <div class="control-panel">
-            <button id="analyze-btn" class="main-btn">유사도 분석 시작</button>
-            <!-- 평소에는 숨겨져 있다가 분석 시작 시 나타나는 상태/결과 표시 영역 -->
-            <div id="result-box"></div>
+            <button id="analyze-btn" class="main-btn">정밀 분석 시작</button>
+            <div id="status-box"></div>
         </div>
 
-        <!-- 분석 완료 후 나타나는 저장 창 -->
+        <!-- 정밀 채점 결과 및 AI 코칭 리포트 패널 -->
+        <div id="report-panel" class="panel">
+            <h4>정밀 퍼포먼스 분석 리포트</h4>
+            
+            <div class="total-score-card">
+                <span class="total-label">종합 정확도</span>
+                <span id="score-total" class="total-value">0점</span>
+                <span id="grade-badge" class="grade-badge">-</span>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-header">
+                        <span>손 / 상체 라인</span>
+                        <strong id="score-hand">0점</strong>
+                    </div>
+                    <div class="progress-bar"><div id="bar-hand" class="progress-fill"></div></div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-header">
+                        <span>발 / 하체 스텝</span>
+                        <strong id="score-foot">0점</strong>
+                    </div>
+                    <div class="progress-bar"><div id="bar-foot" class="progress-fill"></div></div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-header">
+                        <span>박자 / 리듬 동기화</span>
+                        <strong id="score-rhythm">0점</strong>
+                    </div>
+                    <div class="progress-bar"><div id="bar-rhythm" class="progress-fill"></div></div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-header">
+                        <span>표정 / 시선 처리</span>
+                        <strong id="score-face">0점</strong>
+                    </div>
+                    <div class="progress-bar"><div id="bar-face" class="progress-fill"></div></div>
+                </div>
+            </div>
+
+            <!-- 세부 교정 조언 영역 -->
+            <div class="advice-section">
+                <h5>상세 트레이닝 피드백</h5>
+                <ul id="advice-list" class="advice-list"></ul>
+            </div>
+        </div>
+
+        <!-- 구글 스프레드시트 저장 패널 -->
         <div id="save-panel" class="panel">
             <h4>연습 기록 저장하기</h4>
-            <p class="panel-desc">기존 그룹을 선택하거나 새 곡(그룹) 이름을 직접 입력하세요.</p>
+            <p class="panel-desc">기존 곡을 선택하거나 새 곡(그룹) 이름을 입력해 세부 점수를 기록하세요.</p>
             
             <select id="existing-group-select">
                 <option value="">-- 새 곡(그룹) 직접 입력 --</option>
             </select>
             <br>
-            <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
+            <input type="text" id="group-name-input" placeholder="예: 에스파 - Supernova">
             <br>
-            <button id="save-btn" class="main-btn">구글 시트에 저장하기</button>
+            <button id="save-btn" class="main-btn">세부 기록 저장하기</button>
             <div id="save-status"></div>
         </div>
     </div>
@@ -102,12 +152,29 @@
     <div id="tab-graph" class="tab-content">
         <div class="panel">
             <h4>나의 실력 성장 그래프</h4>
+            
             <div class="graph-control">
                 <label for="group-select">조회할 곡 선택:</label>
                 <select id="group-select">
                     <option value="">-- 곡을 선택하세요 --</option>
                 </select>
+                
+                <!-- 곡 제목 수정 및 삭제 버튼 -->
+                <div id="group-manage-actions" class="manage-actions">
+                    <button type="button" id="rename-group-btn" class="sub-btn">곡 이름 수정</button>
+                    <button type="button" id="delete-group-btn" class="delete-btn-wide">곡 기록 삭제</button>
+                </div>
             </div>
+
+            <!-- 세부 지표 필터 체크박스 -->
+            <div class="chart-filters">
+                <label class="filter-chip"><input type="checkbox" class="metric-toggle" value="total" checked> 종합</label>
+                <label class="filter-chip"><input type="checkbox" class="metric-toggle" value="hand" checked> 손/상체</label>
+                <label class="filter-chip"><input type="checkbox" class="metric-toggle" value="foot" checked> 발/스텝</label>
+                <label class="filter-chip"><input type="checkbox" class="metric-toggle" value="rhythm" checked> 박자</label>
+                <label class="filter-chip"><input type="checkbox" class="metric-toggle" value="face" checked> 표정/시선</label>
+            </div>
+
             <canvas id="scoreChart"></canvas>
         </div>
     </div>
