@@ -5,33 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KPOP 안무 연습 앱</title>
     <style>
-        /* 다크 테마 & 보라색 포인트 전역 설정 */
         * { box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             margin: 0; 
-            padding: 15px; 
+            padding: 16px; 
             background: #0f172a; 
             color: #f8fafc; 
         }
         h1 { 
             text-align: center; 
             font-size: 24px; 
-            margin-bottom: 24px; 
+            margin: 10px 0 24px; 
             color: #c4b5fd; 
+            letter-spacing: -0.5px;
         }
-        h2, h3, h4 { margin-top: 0; color: #e2e8f0; }
+        h3, h4 { margin-top: 0; color: #e2e8f0; }
 
-        /* 비디오 컨테이너 */
         .container { 
             display: flex; 
-            gap: 15px; 
+            gap: 16px; 
             justify-content: center; 
             flex-wrap: wrap; 
             margin-bottom: 20px; 
         }
         
-        /* 개별 카드 박스 */
         .box { 
             background: #1e293b; 
             border: 1px solid #334155;
@@ -42,7 +40,7 @@
             max-width: 400px; 
         }
 
-        /* 드래그 앤 드롭 빈 영역 (영상 업로드 전 표시) */
+        /* 업로드 전 빈 드롭존 */
         .drop-zone {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -59,7 +57,8 @@
             cursor: pointer;
             color: #94a3b8;
             font-size: 14px;
-            transition: border-color 0.2s, background 0.2s, color 0.2s;
+            line-height: 1.5;
+            transition: all 0.2s ease;
         }
         .drop-zone:hover, .drop-zone.dragover {
             border-color: #8b5cf6;
@@ -67,7 +66,7 @@
             color: #c4b5fd;
         }
 
-        /* 비디오 플레이어 (업로드 전에는 숨김) */
+        /* 업로드 후 나타나는 비디오 */
         video { 
             display: none;
             width: 100%; 
@@ -80,7 +79,6 @@
             border: 1px solid #475569;
         }
 
-        /* 모바일 즉시 촬영 버튼 & 재선택 버튼 영역 */
         .action-row {
             display: flex;
             gap: 8px;
@@ -97,23 +95,22 @@
             cursor: pointer;
             flex: 1;
             text-align: center;
-            box-shadow: none;
         }
         .sub-btn:hover { background: #475569; }
+        
         .camera-btn {
             background: #6d28d9;
             border-color: #7c3aed;
         }
         .camera-btn:hover { background: #5b21b6; }
 
-        /* 컨트롤 및 공통 패널 */
         .control-panel { text-align: center; margin: 24px 0; }
         
         .panel {
             background: #1e293b;
             border: 1px solid #334155;
             width: 100%;
-            max-width: 815px;
+            max-width: 816px;
             margin: 20px auto;
             padding: 20px;
             border-radius: 12px;
@@ -122,12 +119,11 @@
         }
         #save-panel { display: none; }
 
-        /* 입력창 및 셀렉트박스 */
         .panel input, .panel select {
             width: 100%;
             max-width: 400px;
             padding: 12px;
-            margin: 10px 0;
+            margin: 8px 0;
             background: #0f172a;
             color: #f8fafc;
             border: 1px solid #475569;
@@ -139,7 +135,6 @@
             border-color: #8b5cf6;
         }
 
-        /* 메인 분석 버튼 */
         .main-btn { 
             background: #8b5cf6; 
             color: white; 
@@ -160,13 +155,14 @@
 
         #save-btn { 
             background: #10b981; 
+            margin-top: 8px;
             box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
         }
         #save-btn:hover { background: #059669; }
         
         #result-box { 
             text-align: center; 
-            font-size: 22px; 
+            font-size: 20px; 
             font-weight: bold; 
             margin-top: 16px; 
             color: #a78bfa; 
@@ -189,7 +185,7 @@
         }
     </style>
 
-    <!-- TensorFlow.js, MoveNet 및 Chart.js 라이브러리 로드 -->
+    <!-- TensorFlow.js, MoveNet 및 Chart.js 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
@@ -201,17 +197,15 @@
     <h1>KPOP 안무 연습 앱</h1>
 
     <div class="container">
-        <!-- 1. 원본 안무 영상 영역 -->
+        <!-- 1. 원본 안무 영상 -->
         <div class="box">
             <h3>1. 원본 안무 영상</h3>
             <input type="file" id="ref-video-file" accept="video/*" hidden>
             
-            <!-- 업로드 전 빈 드롭존 -->
             <div id="ref-drop-zone" class="drop-zone">
                 <div>여기에 원본 영상 파일을 끌어다 놓거나<br>클릭해서 파일을 선택하세요</div>
             </div>
             
-            <!-- 업로드 후 나타나는 비디오 -->
             <video id="ref-video" controls muted playsinline></video>
             
             <div class="action-row">
@@ -219,19 +213,16 @@
             </div>
         </div>
 
-        <!-- 2. 내 연습 영상 영역 -->
+        <!-- 2. 내 연습 영상 -->
         <div class="box">
             <h3>2. 내 연습 영상</h3>
             <input type="file" id="user-video-file" accept="video/*" hidden>
-            <!-- 모바일 카메라 즉시 촬영용 숨김 input -->
             <input type="file" id="user-camera-file" accept="video/*" capture="environment" hidden>
             
-            <!-- 업로드 전 빈 드롭존 -->
             <div id="user-drop-zone" class="drop-zone">
                 <div>여기에 연습 영상 파일을 끌어다 놓거나<br>클릭 또는 아래 버튼으로 촬영하세요</div>
             </div>
             
-            <!-- 업로드 후 나타나는 비디오 -->
             <video id="user-video" controls muted playsinline></video>
 
             <div class="action-row">
@@ -246,10 +237,15 @@
         <div id="result-box">분석 대기 중...</div>
     </div>
 
-    <!-- 분석 완료 후 나타나는 구글 시트 저장 창 -->
+    <!-- 분석 완료 후 나타나는 저장 창 -->
     <div id="save-panel" class="panel">
         <h4>연습 기록 저장하기</h4>
-        <p style="font-size: 14px; color: #94a3b8;">연습한 곡(무리) 이름을 입력하면 날짜별 그래프로 묶어볼 수 있습니다.</p>
+        <p style="font-size: 14px; color: #94a3b8;">기존 그룹을 선택하거나 새 곡(그룹) 이름을 직접 입력하세요.</p>
+        
+        <select id="existing-group-select">
+            <option value="">-- 새 곡(그룹) 직접 입력 --</option>
+        </select>
+        <br>
         <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
         <br>
         <button id="save-btn" class="main-btn">구글 시트에 저장하기</button>
