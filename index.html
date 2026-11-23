@@ -1,155 +1,92 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>안무 유사도 비교 앱</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Chart.js 라이브러리 추가 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안무 유사도 분석기 (TensorFlow.js + Google Sheets)</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
+        h1 { text-align: center; }
+        .container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 400px; }
+        video { width: 100%; border-radius: 4px; background: #000; margin-top: 10px; }
+        .control-panel { text-align: center; margin-top: 20px; }
+        button { background: #4f46e5; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #4338ca; }
+        button:disabled { background: #a5b4fc; cursor: not-allowed; }
+        #result-box { text-align: center; font-size: 24px; font-weight: bold; margin-top: 20px; color: #4f46e5; }
+        
+        /* 점수 저장 패널 스타일 */
+        #save-panel {
+            display: none; /* 분석 완료 후 표시 */
+            background: white;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        #save-panel input {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+        #save-btn { background: #10b981; margin-top: 5px; }
+        #save-btn:hover { background: #059669; }
+        #save-status { margin-top: 10px; font-size: 14px; color: #555; }
+
+        /* 반응형 모바일 대응 */
+        @media(max-width: 850px) {
+            .container { flex-direction: column; align-items: center; }
+            .box, #save-panel { width: 100%; max-width: 400px; box-sizing: border-box; }
+        }
+    </style>
+
+    <!-- TensorFlow.js 및 MoveNet 필수 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
 </head>
 <body>
-  <div class="app-container">
-    <header class="app-header">
-      <h1>안무 유사도 비교 앱</h1>
-      <p>유튜브 원본 안무와 내 연습 영상을 비교하고 성장 그래프를 확인하세요.</p>
-    </header>
 
-    <!-- 메타데이터 입력 영역 -->
-    <section class="meta-section">
-      <div class="input-group">
-        <label for="userId">사용자 ID / 이름</label>
-        <input type="text" id="userId" placeholder="예: dancer_01" />
-      </div>
-      <div class="input-group">
-        <label for="songTitle">기본 곡명 / 메모 (선택)</label>
-        <input type="text" id="songTitle" placeholder="예: 뉴진스 - 슈퍼샤이" />
-      </div>
-    </section>
+    <h1>댄스 유사도 분석 (브라우저 AI)</h1>
 
-    <!-- 반응형 듀얼 비디오 그리드 (모바일에서는 세로로 전환) -->
-    <section class="video-grid">
-      <!-- [왼쪽/위] 유튜브 원본 안무 카드 -->
-      <div class="video-card">
-        <div class="card-header">
-          <h2>기준 영상 (유튜브 원본)</h2>
-        </div>
-        
-        <div class="youtube-input-group">
-          <input type="text" id="refYoutubeInput" placeholder="유튜브 링크 입력 (예: https://youtu.be/...)" />
-          <button type="button" id="refYoutubeBtn" class="btn outline">불러오기</button>
+    <div class="container">
+        <!-- 원본 영상 영역 -->
+        <div class="box">
+            <h3>1. 원본 안무 영상</h3>
+            <input type="file" id="ref-video-file" accept="video/*"><br>
+            <video id="ref-video" controls muted playsinline></video>
         </div>
 
-        <div class="video-wrapper">
-          <iframe id="refYoutubeFrame" style="width: 100%; height: 100%; border: none; display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-          <div class="placeholder" id="refPlaceholder">
-            <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">유튜브 링크를 입력해 주세요</p>
-            <span style="font-size: 0.78rem; color: #64748b;">재생 플레이어가 이 곳에 나타납니다</span>
-          </div>
+        <!-- 내 연습 영상 영역 -->
+        <div class="box">
+            <h3>2. 내 연습 영상</h3>
+            <input type="file" id="user-video-file" accept="video/*"><br>
+            <video id="user-video" controls muted playsinline></video>
         </div>
-      </div>
+    </div>
 
-      <!-- [오른쪽/아래] 사용자 연습 영상 업로드 카드 -->
-      <div class="video-card">
-        <div class="card-header">
-          <h2>사용자 영상 (연습 영상)</h2>
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <input type="file" id="userVideoInput" accept="video/*" style="display: none;" />
-            <button type="button" id="userSelectBtn" class="btn secondary" style="padding: 6px 12px; font-size: 0.8rem;">🎥 촬영 / 파일</button>
-          </div>
-        </div>
+    <div class="control-panel">
+        <button id="analyze-btn">유사도 분석 시작</button>
+        <div id="result-box">분석 대기 중...</div>
+    </div>
 
-        <div class="spacer-box" style="margin-bottom: 12px; height: 36px;">-</div>
+    <!-- 분석 완료 후 나타나는 구글 시트 저장 창 -->
+    <div id="save-panel">
+        <h4>📊 연습 기록 저장하기</h4>
+        <p style="font-size: 14px; color: #666;">같은 곡 이름으로 입력하면 나중에 그래프로 묶어볼 수 있습니다.</p>
+        <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
+        <br>
+        <button id="save-btn">구글 시트에 저장하기</button>
+        <div id="save-status"></div>
+    </div>
 
-        <div class="video-wrapper" id="userDropZone" style="border: 2px dashed #334155; cursor: pointer; transition: border-color 0.2s, background 0.2s;">
-          <video id="userVideo" controls playsinline></video>
-          <div class="placeholder" id="userPlaceholder">
-            <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">여기로 연습 영상을 끌어다 놓으세요</p>
-            <span style="font-size: 0.78rem; color: #64748b;">파일 선택 / 스마트폰 촬영</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 분석 실행 버튼 영역 -->
-    <section class="controls-section">
-      <button id="analyzeBtn" class="btn primary" disabled>유사도 분석 시작</button>
-    </section>
-
-    <!-- 분석 진행 상태 표시 -->
-    <section id="loadingSection" class="loading-section hidden">
-      <div class="spinner"></div>
-      <p>연습 영상을 분석 중입니다...</p>
-    </section>
-
-    <!-- 분석 결과 대시보드 + 곡(무리) 선택 저장 UI -->
-    <section id="resultSection" class="result-section hidden">
-      <h2>분석 결과 리포트</h2>
-      
-      <div class="score-cards">
-        <div class="score-box highlight">
-          <span class="score-label">종합 유사도</span>
-          <strong class="score-value" id="totalScore">0%</strong>
-        </div>
-        <div class="score-box">
-          <span class="score-label">포즈 정확도</span>
-          <strong class="score-value" id="poseScore">0%</strong>
-        </div>
-        <div class="score-box">
-          <span class="score-label">타이밍 일치도</span>
-          <strong class="score-value" id="timingScore">0%</strong>
-        </div>
-      </div>
-
-      <div class="detail-box">
-        <p><strong>분석 ID:</strong> <span id="analysisId">-</span></p>
-        <p><strong>분석 일시:</strong> <span id="analyzedAt">-</span></p>
-        <p><strong>부위별 점수:</strong> <span id="bodyPartScores">-</span></p>
-        <p><strong>주요 오차 구간:</strong> <span id="errorTimestamps">-</span></p>
-        <p><strong>피드백 요약:</strong> <span id="feedbackSummary">-</span></p>
-      </div>
-
-      <!-- 점수 기록용 곡(무리) 선택 및 저장 박스 -->
-      <div class="save-group-box">
-        <h3>스프레드시트에 연습 기록 저장하기</h3>
-        <p class="save-desc">기존 곡 무리에 점수를 이어서 기록하거나, 새로운 곡 이름을 만들어 저장하세요.</p>
-        
-        <div class="save-controls">
-          <select id="saveSongSelect" class="styled-select">
-            <option value="__NEW__">+ 새 곡 추가 (직접 입력)</option>
-          </select>
-          
-          <input type="text" id="newSongInput" class="styled-input" placeholder="새 곡 이름 입력" />
-          
-          <button type="button" id="saveRecordBtn" class="btn primary" style="width: auto; padding: 10px 22px;">기록 저장하기</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 곡별 유사도 점수 변화 그래프 영역 -->
-    <section class="chart-section">
-      <div class="chart-header">
-        <div>
-          <h2>곡별 유사도 점수 변화 그래프</h2>
-          <p class="chart-sub">회차별 점수 추이를 확인하세요.</p>
-        </div>
-        <div class="chart-controls">
-          <select id="chartSongSelect" class="styled-select">
-            <option value="">곡 불러오는 중...</option>
-          </select>
-          <button type="button" id="refreshChartBtn" class="btn outline">새로고침</button>
-        </div>
-      </div>
-
-      <div class="chart-container">
-        <canvas id="scoreHistoryChart"></canvas>
-        <div id="chartEmptyState" class="chart-empty hidden">
-          선택한 곡의 기록이 아직 없거나 스프레드시트 URL이 설정되지 않았습니다.
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
