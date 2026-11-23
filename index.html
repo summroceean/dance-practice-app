@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KPOP 안무 연습 앱</title>
-    <!-- CSS 파일 연결 -->
     <link rel="stylesheet" href="style.css">
 
     <!-- TensorFlow.js, MoveNet 및 Chart.js 라이브러리 -->
@@ -16,82 +15,90 @@
 </head>
 <body>
 
-    <h1>KPOP 안무 연습 앱</h1>
+    <header class="app-header">
+        <h1>KPOP 안무 연습 앱</h1>
+        <p class="subtitle">원본 안무와 내 연습 영상을 AI로 비교해 유사도 점수를 확인하고, 날짜별 실력 성장을 그래프로 기록해 보세요.</p>
+    </header>
 
-    <div class="container">
-        <!-- 1. 원본 안무 영상 -->
-        <div class="box">
-            <h3>1. 원본 안무 영상</h3>
-            <input type="file" id="ref-video-file" accept="video/*" hidden>
-            
-            <!-- 비어있는 드래그 앤 드롭 칸 -->
-            <div id="ref-drop-zone" class="drop-zone">
-                <div>여기에 원본 영상 파일을 끌어다 놓거나<br>클릭해서 파일을 선택하세요</div>
+    <!-- 상단 탭 메뉴 -->
+    <div class="tab-menu">
+        <button type="button" class="tab-btn active" data-target="tab-analyze">안무 유사도 분석</button>
+        <button type="button" class="tab-btn" data-target="tab-graph">성장 기록 그래프</button>
+    </div>
+
+    <!-- 탭 1: 안무 유사도 분석 화면 -->
+    <div id="tab-analyze" class="tab-content active">
+        <div class="container">
+            <!-- 1. 원본 안무 영상 -->
+            <div class="box">
+                <h3>1. 원본 안무 영상</h3>
+                <input type="file" id="ref-video-file" accept="video/*" hidden>
+                
+                <div id="ref-drop-zone" class="drop-zone">
+                    <div>여기에 원본 영상 파일을 끌어다 놓거나<br>클릭해서 파일을 선택하세요</div>
+                </div>
+                
+                <video id="ref-video" controls muted playsinline></video>
+                
+                <div class="action-row">
+                    <button type="button" class="sub-btn" onclick="document.getElementById('ref-video-file').click()">파일 선택</button>
+                </div>
             </div>
-            
-            <!-- 파일 업로드 후 표시되는 비디오 -->
-            <video id="ref-video" controls muted playsinline></video>
-            
-            <div class="action-row">
-                <button type="button" class="sub-btn" onclick="document.getElementById('ref-video-file').click()">파일 선택</button>
+
+            <!-- 2. 내 연습 영상 -->
+            <div class="box">
+                <h3>2. 내 연습 영상</h3>
+                <input type="file" id="user-video-file" accept="video/*" hidden>
+                <input type="file" id="user-camera-file" accept="video/*" capture="user" hidden>
+                
+                <div id="user-drop-zone" class="drop-zone">
+                    <div>여기에 연습 영상 파일을 끌어다 놓거나<br>아래 버튼으로 촬영 또는 선택하세요</div>
+                </div>
+                
+                <video id="user-video" controls muted playsinline></video>
+
+                <div class="action-row">
+                    <button type="button" class="sub-btn" onclick="document.getElementById('user-video-file').click()">파일 선택</button>
+                    <button type="button" class="sub-btn camera-btn" onclick="document.getElementById('user-camera-file').click()">카메라로 안무 촬영하기</button>
+                </div>
             </div>
         </div>
 
-        <!-- 2. 내 연습 영상 -->
-        <div class="box">
-            <h3>2. 내 연습 영상</h3>
-            <input type="file" id="user-video-file" accept="video/*" hidden>
-            <!-- 모바일 카메라 즉시 촬영용 입력 태그 -->
-            <input type="file" id="user-camera-file" accept="video/*" capture="user" hidden>
-            
-            <!-- 비어있는 드래그 앤 드롭 칸 -->
-            <div id="user-drop-zone" class="drop-zone">
-                <div>여기에 연습 영상 파일을 끌어다 놓거나<br>아래 버튼으로 촬영 또는 선택하세요</div>
-            </div>
-            
-            <!-- 파일 업로드 후 표시되는 비디오 -->
-            <video id="user-video" controls muted playsinline></video>
-
-            <div class="action-row">
-                <button type="button" class="sub-btn" onclick="document.getElementById('user-video-file').click()">파일 선택</button>
-                <button type="button" class="sub-btn camera-btn" onclick="document.getElementById('user-camera-file').click()">카메라로 안무 촬영하기</button>
-            </div>
+        <div class="control-panel">
+            <button id="analyze-btn" class="main-btn">유사도 분석 시작</button>
+            <div id="result-box">분석 대기 중...</div>
         </div>
-    </div>
 
-    <div class="control-panel">
-        <button id="analyze-btn" class="main-btn">유사도 분석 시작</button>
-        <div id="result-box">분석 대기 중...</div>
-    </div>
-
-    <!-- 분석 완료 후 나타나는 저장 창 -->
-    <div id="save-panel" class="panel">
-        <h4>연습 기록 저장하기</h4>
-        <p class="panel-desc">기존 그룹을 선택하거나 새 곡(그룹) 이름을 직접 입력하세요.</p>
-        
-        <select id="existing-group-select">
-            <option value="">-- 새 곡(그룹) 직접 입력 --</option>
-        </select>
-        <br>
-        <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
-        <br>
-        <button id="save-btn" class="main-btn">구글 시트에 저장하기</button>
-        <div id="save-status"></div>
-    </div>
-
-    <!-- 날짜별 점수 변화 그래프 패널 -->
-    <div class="panel">
-        <h4>나의 실력 성장 그래프</h4>
-        <div class="graph-control">
-            <label for="group-select">조회할 곡 선택:</label>
-            <select id="group-select">
-                <option value="">-- 곡을 선택하세요 --</option>
+        <!-- 분석 완료 후 나타나는 저장 창 -->
+        <div id="save-panel" class="panel">
+            <h4>연습 기록 저장하기</h4>
+            <p class="panel-desc">기존 그룹을 선택하거나 새 곡(그룹) 이름을 직접 입력하세요.</p>
+            
+            <select id="existing-group-select">
+                <option value="">-- 새 곡(그룹) 직접 입력 --</option>
             </select>
+            <br>
+            <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
+            <br>
+            <button id="save-btn" class="main-btn">구글 시트에 저장하기</button>
+            <div id="save-status"></div>
         </div>
-        <canvas id="scoreChart"></canvas>
     </div>
 
-    <!-- JavaScript 파일 연결 -->
+    <!-- 탭 2: 성장 기록 그래프 화면 -->
+    <div id="tab-graph" class="tab-content">
+        <div class="panel">
+            <h4>나의 실력 성장 그래프</h4>
+            <div class="graph-control">
+                <label for="group-select">조회할 곡 선택:</label>
+                <select id="group-select">
+                    <option value="">-- 곡을 선택하세요 --</option>
+                </select>
+            </div>
+            <canvas id="scoreChart"></canvas>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

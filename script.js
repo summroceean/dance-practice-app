@@ -1,6 +1,28 @@
 // ⚠️ 여기에 본인의 Google Apps Script 웹 앱 배포 URL을 넣어주세요!
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWRReORXZ1s9jVw8PMS7ZpkLuwcNKSSb4-fjZaK4R5HqJ4gbgSeuc7fY9nEJJLA387/exec";
 
+// 탭 전환 로직
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        // 모든 탭 버튼과 콘텐츠 비활성화
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+
+        // 클릭한 탭 활성화
+        btn.classList.add('active');
+        const targetId = btn.getAttribute('data-target');
+        document.getElementById(targetId).classList.add('active');
+
+        // 그래프 탭으로 이동 시 최신 기록 자동 갱신
+        if (targetId === 'tab-graph') {
+            fetchRecordsAndSetupDropdown();
+        }
+    });
+});
+
 const refVideoFile = document.getElementById('ref-video-file');
 const userVideoFile = document.getElementById('user-video-file');
 const userCameraFile = document.getElementById('user-camera-file');
@@ -201,7 +223,7 @@ saveBtn.addEventListener('click', async () => {
             body: JSON.stringify({ groupName: groupName, score: currentScore })
         });
 
-        saveStatus.innerText = `'${groupName}' (${currentScore}점) 저장 완료!`;
+        saveStatus.innerText = `'${groupName}' (${currentScore}점) 저장 완료! 상단 '성장 기록 그래프' 탭에서 확인하세요.`;
         setTimeout(fetchRecordsAndSetupDropdown, 1500);
     } catch (error) {
         console.error("저장 오류:", error);
@@ -220,6 +242,7 @@ async function fetchRecordsAndSetupDropdown() {
         allRecords = await response.json();
 
         const groups = [...new Set(allRecords.map(r => r.groupName))];
+        const previousSelection = groupSelect.value;
 
         groupSelect.innerHTML = '<option value="">-- 곡을 선택하세요 --</option>';
         existingGroupSelect.innerHTML = '<option value="">-- 새 곡(그룹) 직접 입력 --</option>';
@@ -235,14 +258,19 @@ async function fetchRecordsAndSetupDropdown() {
             opt2.textContent = g;
             existingGroupSelect.appendChild(opt2);
         });
+
+        // 이전에 보고 있던 곡이 있으면 유지하고 그래프 갱신
+        if (previousSelection && groups.includes(previousSelection)) {
+            groupSelect.value = previousSelection;
+            renderChart(previousSelection);
+        }
     } catch (error) {
         console.error("기록 불러오기 실패:", error);
     }
 }
 
-// 4. 꺾은선 그래프(Chart.js) 업데이트
-groupSelect.addEventListener('change', (e) => {
-    const selectedGroup = e.target.value;
+// 4. 꺾은선 그래프(Chart.js) 그리기 함수
+function renderChart(selectedGroup) {
     const filtered = allRecords.filter(r => r.groupName === selectedGroup);
 
     const labels = filtered.map(r => r.date);
@@ -286,6 +314,10 @@ groupSelect.addEventListener('change', (e) => {
             }
         }
     });
+}
+
+groupSelect.addEventListener('change', (e) => {
+    renderChart(e.target.value);
 });
 
 fetchRecordsAndSetupDropdown();
