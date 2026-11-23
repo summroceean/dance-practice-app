@@ -10,7 +10,6 @@ body {
     color: #f8fafc;
 }
 
-/* 헤더 및 앱 설명 */
 .app-header {
     text-align: center;
     max-width: 600px;
@@ -32,7 +31,7 @@ h1 {
     word-break: keep-all;
 }
 
-/* 탭 메뉴 버튼 스타일 */
+/* 탭 메뉴 */
 .tab-menu {
     display: flex;
     justify-content: center;
@@ -68,7 +67,6 @@ h1 {
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
 }
 
-/* 탭 콘텐츠 전환 제어 */
 .tab-content {
     display: none;
 }
@@ -100,7 +98,7 @@ h3, h4 {
     max-width: 400px;
 }
 
-/* 영상 업로드 전 빈 드롭존 */
+/* 빈 드롭존 */
 .drop-zone {
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -128,17 +126,37 @@ h3, h4 {
     color: #c4b5fd;
 }
 
-/* 비디오 플레이어 */
-video {
+/* 비디오 및 관절 오버레이 래퍼 */
+.video-wrapper {
     display: none;
+    position: relative;
     width: 100%;
-    height: auto;
     aspect-ratio: 16 / 9;
-    border-radius: 8px;
-    background-color: #000;
     margin-top: 12px;
-    object-fit: cover;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #000;
     border: 1px solid #475569;
+}
+
+.video-wrapper video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* 비디오 위에 투명하게 겹치는 관절 캔버스 */
+.pose-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 비디오 컨트롤 클릭 방해 방지 */
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .action-row {
@@ -286,7 +304,7 @@ video {
     color: #94a3b8;
 }
 
-canvas {
+#scoreChart {
     width: 100% !important;
     height: auto !important;
     max-height: 320px;

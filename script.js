@@ -7,16 +7,13 @@ const tabContents = document.querySelectorAll('.tab-content');
 
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        // 모든 탭 버튼과 콘텐츠 비활성화
         tabBtns.forEach(b => b.classList.remove('active'));
         tabContents.forEach(c => c.classList.remove('active'));
 
-        // 클릭한 탭 활성화
         btn.classList.add('active');
         const targetId = btn.getAttribute('data-target');
         document.getElementById(targetId).classList.add('active');
 
-        // 그래프 탭으로 이동 시 최신 기록 자동 갱신
         if (targetId === 'tab-graph') {
             fetchRecordsAndSetupDropdown();
         }
@@ -30,8 +27,14 @@ const userCameraFile = document.getElementById('user-camera-file');
 const refDropZone = document.getElementById('ref-drop-zone');
 const userDropZone = document.getElementById('user-drop-zone');
 
+const refVideoWrapper = document.getElementById('ref-video-wrapper');
+const userVideoWrapper = document.getElementById('user-video-wrapper');
+
 const refVideo = document.getElementById('ref-video');
 const userVideo = document.getElementById('user-video');
+
+const refCanvas = document.getElementById('ref-canvas');
+const userCanvas = document.getElementById('user-canvas');
 
 const analyzeBtn = document.getElementById('analyze-btn');
 const resultBox = document.getElementById('result-box');
@@ -49,19 +52,83 @@ let currentScore = null;
 let allRecords = [];
 let scoreChart = null;
 
-// 영상 파일을 받아 빈 칸(드롭존)을 숨기고 비디오를 띄우는 함수
-function loadVideoToPlayer(file, videoElement, dropZoneElement) {
+// MoveNet 17개 관절 연결 쌍 (뼈대 선 그리기용)
+const CONNECTED_KEYPOINTS = [
+    [5, 6],   // 왼쪽 어깨 - 오른쪽 어깨
+    [5, 7],   // 왼쪽 어깨 - 왼쪽 팔꿈치
+    [7, 9],   // 왼쪽 팔꿈치 - 왼쪽 손목
+    [6, 8],   // 오른쪽 어깨 - 오른쪽 팔꿈치
+    [8, 10],  // 오른쪽 팔꿈치 - 오른쪽 손목
+    [5, 11],  // 왼쪽 어깨 - 왼쪽 골반
+    [6, 12],  // 오른쪽 어깨 - 오른쪽 골반
+    [11, 12], // 왼쪽 골반 - 오른쪽 골반
+    [11, 13], // 왼쪽 골반 - 왼쪽 무릎
+    [13, 15], // 왼쪽 무릎 - 왼쪽 발목
+    [12, 14], // 오른쪽 골반 - 오른쪽 무릎
+    [14, 16]  // 오른쪽 무릎 - 오른쪽 발목
+];
+
+// 영상 위에 관절 포인트와 뼈대 선을 그리는 함수
+function drawSkeleton(keypoints, videoElement, canvasElement, lineColor, pointColor) {
+    const canvasCtx = canvasElement.getContext('2d');
+    
+    // 비디오 원본 해상도에 맞춰 캔버스 내부 해상도 동기화
+    canvasElement.width = videoElement.videoWidth;
+    canvasElement.height = videoElement.videoHeight;
+
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+    const minConfidence = 0.3;
+
+    // 1. 뼈대 선 그리기
+    canvasCtx.strokeStyle = lineColor;
+    canvasCtx.lineWidth = Math.max(3, canvasElement.width / 160);
+    canvasCtx.lineCap = 'round';
+
+    CONNECTED_KEYPOINTS.forEach(([i, j]) => {
+        const kp1 = keypoints[i];
+        const kp2 = keypoints[j];
+        if (kp1 && kp2 && kp1.score > minConfidence && kp2.score > minConfidence) {
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(kp1.x, kp1.y);
+            canvasCtx.lineTo(kp2.x, kp2.y);
+            canvasCtx.stroke();
+        }
+    });
+
+    // 2. 관절 포인트 원 그리기
+    canvasCtx.fillStyle = pointColor;
+    const radius = Math.max(4, canvasElement.width / 110);
+
+    keypoints.forEach(kp => {
+        if (kp.score > minConfidence) {
+            canvasCtx.beginPath();
+            canvasCtx.arc(kp.x, kp.y, radius, 0, 2 * Math.PI);
+            canvasCtx.fill();
+        }
+    });
+}
+
+// 캔버스 초기화 함수
+function clearCanvas(canvasElement) {
+    const canvasCtx = canvasElement.getContext('2d');
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+}
+
+// 영상 파일을 받아 빈 칸(드롭존)을 숨기고 비디오 래퍼를 띄우는 함수
+function loadVideoToPlayer(file, videoElement, dropZoneElement, wrapperElement, canvasElement) {
     if (!file || !file.type.startsWith('video/')) {
         alert("동영상 파일만 업로드할 수 있습니다.");
         return;
     }
     videoElement.src = URL.createObjectURL(file);
     dropZoneElement.style.display = "none";
-    videoElement.style.display = "block";
+    wrapperElement.style.display = "block";
+    clearCanvas(canvasElement);
 }
 
 // 드래그 앤 드롭 및 클릭 이벤트 설정
-function setupDropZone(dropZone, fileInput, videoElement) {
+function setupDropZone(dropZone, fileInput, videoElement, wrapperElement, canvasElement) {
     dropZone.addEventListener('click', () => fileInput.click());
 
     dropZone.addEventListener('dragover', (e) => {
@@ -77,27 +144,30 @@ function setupDropZone(dropZone, fileInput, videoElement) {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
-            loadVideoToPlayer(e.dataTransfer.files[0], videoElement, dropZone);
+            loadVideoToPlayer(e.dataTransfer.files[0], videoElement, dropZone, wrapperElement, canvasElement);
         }
     });
 }
 
-setupDropZone(refDropZone, refVideoFile, refVideo);
-setupDropZone(userDropZone, userVideoFile, userVideo);
+setupDropZone(refDropZone, refVideoFile, refVideo, refVideoWrapper, refCanvas);
+setupDropZone(userDropZone, userVideoFile, userVideo, userVideoWrapper, userCanvas);
 
 refVideoFile.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], refVideo, refDropZone);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], refVideo, refDropZone, refVideoWrapper, refCanvas);
 });
 
 userVideoFile.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone, userVideoWrapper, userCanvas);
 });
 
 userCameraFile.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone, userVideoWrapper, userCanvas);
 });
 
-// 기존 곡 드롭다운 선택 시 입력창 자동 채우기
+// 사용자가 영상을 직접 재생할 때는 캔버스 뼈대 지우기
+refVideo.addEventListener('play', () => clearCanvas(refCanvas));
+userVideo.addEventListener('play', () => clearCanvas(userCanvas));
+
 existingGroupSelect.addEventListener('change', (e) => {
     groupNameInput.value = e.target.value ? e.target.value : "";
 });
@@ -126,7 +196,6 @@ function calculateCosineSimilarity(vectorA, vectorB) {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-// 비디오 특정 시간 이동 후 로드 대기
 function seekVideo(video, time) {
     return new Promise((resolve) => {
         video.currentTime = time;
@@ -134,7 +203,7 @@ function seekVideo(video, time) {
     });
 }
 
-// 1. 유사도 분석 실행
+// 1. 유사도 분석 실행 (관절 뼈대 실시간 오버레이 포함)
 analyzeBtn.addEventListener('click', async () => {
     if (!refVideo.src || !userVideo.src) {
         alert("원본 영상과 내 연습 영상 파일을 모두 업로드해주세요!");
@@ -156,7 +225,7 @@ analyzeBtn.addEventListener('click', async () => {
         let validFrames = 0;
 
         for (let t = 0; t < duration; t += step) {
-            resultBox.innerText = `영상 분석 중... (${Math.round((t / duration) * 100)}%)`;
+            resultBox.innerText = `관절 추적 및 분석 중... (${Math.round((t / duration) * 100)}%)`;
             
             await Promise.all([
                 seekVideo(refVideo, t),
@@ -167,6 +236,20 @@ analyzeBtn.addEventListener('click', async () => {
                 detector.estimatePoses(refVideo),
                 detector.estimatePoses(userVideo)
             ]);
+
+            // 원본 영상 위에 보라색 뼈대 그리기
+            if (refPose.length > 0) {
+                drawSkeleton(refPose[0].keypoints, refVideo, refCanvas, '#a78bfa', '#f472b6');
+            } else {
+                clearCanvas(refCanvas);
+            }
+
+            // 내 영상 위에 에메랄드빛 뼈대 그리기
+            if (userPose.length > 0) {
+                drawSkeleton(userPose[0].keypoints, userVideo, userCanvas, '#34d399', '#fbbf24');
+            } else {
+                clearCanvas(userCanvas);
+            }
 
             if (refPose.length > 0 && userPose.length > 0) {
                 const refVector = normalizeKeypoints(refPose[0].keypoints);
@@ -259,7 +342,6 @@ async function fetchRecordsAndSetupDropdown() {
             existingGroupSelect.appendChild(opt2);
         });
 
-        // 이전에 보고 있던 곡이 있으면 유지하고 그래프 갱신
         if (previousSelection && groups.includes(previousSelection)) {
             groupSelect.value = previousSelection;
             renderChart(previousSelection);
@@ -269,7 +351,7 @@ async function fetchRecordsAndSetupDropdown() {
     }
 }
 
-// 4. 꺾은선 그래프(Chart.js) 그리기 함수
+// 4. 꺾은선 그래프(Chart.js) 그리기
 function renderChart(selectedGroup) {
     const filtered = allRecords.filter(r => r.groupName === selectedGroup);
 
