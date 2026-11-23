@@ -26,15 +26,15 @@ body {
   justify-content: center;
   align-items: stretch;
   overflow-x: hidden;
-  padding: 20px 24px 48px;
+  padding: 16px 12px 40px;
 }
 
 .app-container {
-  width: 96%;
+  width: 100%;
   max-width: 1600px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .app-header {
@@ -43,7 +43,7 @@ body {
 }
 
 .app-header h1 {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   margin-bottom: 4px;
   color: #c4b5fd;
   font-weight: 700;
@@ -52,15 +52,16 @@ body {
 
 .app-header p {
   color: var(--text-sub);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
+  padding: 0 8px;
 }
 
 .meta-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
   background: var(--bg-card);
-  padding: 14px 20px;
+  padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
 }
@@ -68,23 +69,24 @@ body {
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .input-group label {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #cbd5e1;
   font-weight: 600;
 }
 
 .input-group input {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   background: var(--bg-main);
   color: var(--text-main);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   outline: none;
+  width: 100%;
   transition: border-color 0.2s;
 }
 
@@ -92,18 +94,18 @@ body {
   border-color: var(--primary-purple);
 }
 
+/* PC 기본: 좌우 2열 배치 */
 .video-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 16px;
   width: 100%;
-  min-height: 400px;
 }
 
 .video-card {
   background: var(--bg-card);
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 14px;
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -114,45 +116,40 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  gap: 10px;
+  margin-bottom: 10px;
+  gap: 8px;
 }
 
 .card-header h2 {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   color: #e2e8f0;
-  white-space: nowrap;
   font-weight: 600;
 }
 
 .youtube-input-group {
   display: flex;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .youtube-input-group input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   background: var(--bg-main);
   color: var(--text-main);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   outline: none;
-}
-
-.youtube-input-group input:focus {
-  border-color: var(--primary-purple);
+  min-width: 0;
 }
 
 .video-wrapper {
   position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 310px;
+  aspect-ratio: 16 / 9;
   background: #020617;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -168,22 +165,21 @@ video {
 
 .placeholder {
   color: #64748b;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   text-align: center;
-  padding: 16px;
+  padding: 12px;
 }
 
 .controls-section {
   display: flex;
   justify-content: center;
-  gap: 16px;
   padding: 4px 0;
 }
 
 .btn {
-  padding: 12px 28px;
+  padding: 12px 24px;
   border-radius: 10px;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -222,8 +218,8 @@ video {
   background: transparent;
   border: 1px solid var(--primary-purple);
   color: #c4b5fd;
-  font-size: 0.88rem;
-  padding: 8px 16px;
+  font-size: 0.85rem;
+  padding: 8px 14px;
 }
 
 .btn.outline:hover {
@@ -232,18 +228,18 @@ video {
 
 .loading-section {
   text-align: center;
-  padding: 24px;
+  padding: 20px;
   background: var(--bg-card);
   border-radius: 12px;
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 3px solid #1e293b;
   border-top-color: var(--primary-purple);
   border-radius: 50%;
-  margin: 0 auto 10px;
+  margin: 0 auto 8px;
   animation: spin 0.8s linear infinite;
 }
 
@@ -251,30 +247,29 @@ video {
   to { transform: rotate(360deg); }
 }
 
-/* 결과 대시보드 */
 .result-section {
   background: var(--bg-card);
-  border-radius: 14px;
-  padding: 22px;
+  border-radius: 12px;
+  padding: 18px;
   border: 1px solid var(--border-color);
 }
 
 .result-section h2 {
-  margin-bottom: 14px;
-  font-size: 1.15rem;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
 }
 
 .score-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .score-box {
   background: var(--bg-main);
-  padding: 14px;
-  border-radius: 10px;
+  padding: 12px 8px;
+  border-radius: 8px;
   text-align: center;
   border: 1px solid var(--border-color);
 }
@@ -286,26 +281,26 @@ video {
 
 .score-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-sub);
   margin-bottom: 4px;
 }
 
 .score-value {
-  font-size: 1.65rem;
+  font-size: 1.35rem;
   color: #c4b5fd;
 }
 
 .detail-box {
   background: var(--bg-main);
-  padding: 14px 16px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 0.9rem;
+  gap: 6px;
+  font-size: 0.85rem;
   color: #cbd5e1;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .detail-box strong {
@@ -313,43 +308,42 @@ video {
   margin-right: 6px;
 }
 
-/* 곡(무리) 선택 및 기록 저장 UI */
 .save-group-box {
   background: rgba(139, 92, 246, 0.08);
   border: 1px solid rgba(139, 92, 246, 0.35);
-  border-radius: 12px;
-  padding: 18px;
+  border-radius: 10px;
+  padding: 14px;
 }
 
 .save-group-box h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #e9d5ff;
   margin-bottom: 4px;
 }
 
 .save-desc {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: var(--text-sub);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .save-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .styled-select,
 .styled-input {
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-radius: 8px;
   border: 1px solid #334155;
   background: var(--bg-main);
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   outline: none;
-  min-width: 220px;
+  min-width: 160px;
 }
 
 .styled-select:focus,
@@ -361,11 +355,10 @@ video {
   flex: 1;
 }
 
-/* 그래프 섹션 */
 .chart-section {
   background: var(--bg-card);
-  border-radius: 14px;
-  padding: 22px;
+  border-radius: 12px;
+  padding: 18px;
   border: 1px solid var(--border-color);
 }
 
@@ -375,17 +368,17 @@ video {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .chart-header h2 {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   color: #e2e8f0;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .chart-sub {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: var(--text-sub);
 }
 
@@ -398,10 +391,10 @@ video {
 .chart-container {
   position: relative;
   width: 100%;
-  height: 320px;
+  height: 280px;
   background: var(--bg-main);
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 12px;
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -410,10 +403,99 @@ video {
 
 .chart-empty {
   color: var(--text-sub);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   text-align: center;
+  padding: 0 12px;
 }
 
 .hidden {
   display: none !important;
+}
+
+/* ==========================================
+   반응형 웹 디자인 (모바일 최적화 미디어 쿼리)
+   ========================================== */
+@media (max-width: 900px) {
+  body {
+    padding: 10px 8px 30px;
+  }
+
+  .app-container {
+    gap: 12px;
+  }
+
+  /* 1) 메타 입력창 세로 배치 */
+  .meta-section {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  /* 2) 비디오 그리드 세로 1열 배치 (위아래로 순차 정렬) */
+  .video-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .video-card {
+    padding: 10px;
+  }
+
+  /* 모바일 화면에서는 불필요한 spacer 숨김 */
+  .spacer-box {
+    display: none;
+  }
+
+  /* 3) 점수 카드 3개를 모바일 화면에서 세로로 쌓거나 폰트 조절 */
+  .score-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .score-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    text-align: left;
+  }
+
+  .score-value {
+    font-size: 1.25rem;
+  }
+
+  /* 4) 저장 제어 컨트롤 (드롭다운 및 버튼 전체 너비 사용) */
+  .save-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .styled-select,
+  .styled-input,
+  .save-controls .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* 5) 그래프 헤더 및 컨트롤 정렬 */
+  .chart-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .chart-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .chart-controls .styled-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .chart-container {
+    height: 240px;
+    padding: 8px;
+  }
 }
