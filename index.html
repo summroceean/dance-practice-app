@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>안무 유사도 비교 웹 앱</title>
+  <title>안무 유사도 비교 앱</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-container">
     <header class="app-header">
-  <h1>안무 유사도 비교 앱</h1>
-  <p>기준 안무 영상과 연습 영상을 업로드하여 동작 및 박자 일치도를 확인하세요.</p>
-</header>
+      <h1>안무 유사도 비교 앱</h1>
+      <p>기준 안무 영상과 연습 영상을 업로드하여 동작 및 박자 일치도를 확인하세요.</p>
+    </header>
 
     <!-- 메타데이터 입력 영역 -->
     <section class="meta-section">
@@ -25,7 +25,7 @@
       </div>
     </section>
 
-    <!-- 듀얼 비디오 업로드 및 뷰어 -->
+    <!-- 듀얼 비디오 업로드 및 뷰어 (왼쪽: 기준 영상 / 오른쪽: 사용자 영상) -->
     <section class="video-grid">
       <div class="video-card">
         <div class="card-header">
@@ -64,106 +64,7 @@
 
     <!-- 분석 결과 대시보드 -->
     <section id="resultSection" class="result-section hidden">
-      <h2>📊 분석 결과 리포트</h2>
-      
-      <div class="score-cards">
-        <div class="score-box highlight">
-          <span class="score-label">종합 유사도</span>
-          <strong class="score-value" id="totalScore">0%</strong>
-        </div>
-        <div class="score-box">
-          <span class="score-label">포즈(동작) 정확도</span>
-          <strong class="score-value" id="poseScore">0%</strong>
-        </div>
-        <div class="score-box">
-          <span class="score-label">타이밍(박자) 일치도</span>
-          <strong class="score-value" id="timingScore">0%</strong>
-        </div>
-      </div>
-
-      <div class="detail-box">
-        <p><strong>분석 ID:</strong> <span id="analysisId">-</span></p>
-        <p><strong>분석 일시:</strong> <span id="analyzedAt">-</span></p>
-        <p><strong>부위별 점수:</strong> <span id="bodyPartScores">-</span></p>
-        <p><strong>주요 오차 구간:</strong> <span id="errorTimestamps">-</span></p>
-        <p><strong>피드백 요약:</strong> <span id="feedbackSummary">-</span></p>
-      </div>
-
-      <div class="export-actions">
-        <button id="copyCsvBtn" class="btn outline">스프레드시트용 행(CSV) 복사하기</button>
-      </div>
-    </section>
-  </div>
-
-  <script src="script.js"></script>
-</body>
-</html><!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>안무 유사도 비교 웹 앱</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="app-container">
-    <header class="app-header">
-  <h1>안무 유사도 비교 앱</h1>
-  <p>기준 안무 영상과 연습 영상을 업로드하여 동작 및 박자 일치도를 확인하세요.</p>
-</header>
-
-    <!-- 메타데이터 입력 영역 -->
-    <section class="meta-section">
-      <div class="input-group">
-        <label for="userId">사용자 ID / 이름</label>
-        <input type="text" id="userId" placeholder="예: dancer_01" />
-      </div>
-      <div class="input-group">
-        <label for="songTitle">곡명 / 안무 구간</label>
-        <input type="text" id="songTitle" placeholder="예: 신곡 - 후렴구 파트" />
-      </div>
-    </section>
-
-    <!-- 듀얼 비디오 업로드 및 뷰어 -->
-    <section class="video-grid">
-      <div class="video-card">
-        <div class="card-header">
-          <h2>기준 영상 (원본 안무)</h2>
-          <input type="file" id="refVideoInput" accept="video/*" />
-        </div>
-        <div class="video-wrapper">
-          <video id="refVideo" controls playsinline></video>
-          <div class="placeholder" id="refPlaceholder">기준 영상을 선택해주세요</div>
-        </div>
-      </div>
-
-      <div class="video-card">
-        <div class="card-header">
-          <h2>사용자 영상 (연습 영상)</h2>
-          <input type="file" id="userVideoInput" accept="video/*" />
-        </div>
-        <div class="video-wrapper">
-          <video id="userVideo" controls playsinline></video>
-          <div class="placeholder" id="userPlaceholder">연습 영상을 선택해주세요</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 컨트롤 버튼 영역 -->
-    <section class="controls-section">
-      <button id="syncPlayBtn" class="btn secondary" disabled>동시 재생 / 일시정지</button>
-      <button id="analyzeBtn" class="btn primary" disabled>유사도 분석 시작</button>
-    </section>
-
-    <!-- 분석 진행 상태 표시 -->
-    <section id="loadingSection" class="loading-section hidden">
-      <div class="spinner"></div>
-      <p>관절 좌표(Pose) 및 타이밍 데이터를 분석 중입니다...</p>
-    </section>
-
-    <!-- 분석 결과 대시보드 -->
-    <section id="resultSection" class="result-section hidden">
-      <h2>📊 분석 결과 리포트</h2>
+      <h2>분석 결과 리포트</h2>
       
       <div class="score-cards">
         <div class="score-box highlight">
