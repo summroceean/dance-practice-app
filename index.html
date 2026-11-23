@@ -10,7 +10,7 @@
   <div class="app-container">
     <header class="app-header">
       <h1>안무 유사도 비교 앱</h1>
-      <p>기준 안무 영상과 연습 영상을 업로드하여 동작 및 박자 일치도를 확인하세요.</p>
+      <p>기준 안무 영상과 연습 영상을 업로드하거나 유튜브 링크를 입력해 동작을 비교해보세요.</p>
     </header>
 
     <!-- 메타데이터 입력 영역 -->
@@ -25,27 +25,61 @@
       </div>
     </section>
 
-    <!-- 듀얼 비디오 업로드 및 뷰어 (왼쪽: 기준 영상 / 오른쪽: 사용자 영상) -->
+    <!-- 듀얼 비디오 업로드 및 뷰어 -->
     <section class="video-grid">
+      <!-- [왼쪽] 기준 영상 카드 -->
       <div class="video-card">
         <div class="card-header">
           <h2>기준 영상 (원본 안무)</h2>
-          <input type="file" id="refVideoInput" accept="video/*" />
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <!-- 1) 파일 선택 / 스마트폰 카메라 촬영 지원 -->
+            <input type="file" id="refVideoInput" accept="video/*" style="display: none;" />
+            <button type="button" id="refSelectBtn" class="btn secondary" style="padding: 6px 12px; font-size: 0.8rem;">📁 파일 / 촬영</button>
+          </div>
         </div>
-        <div class="video-wrapper">
+
+        <!-- 3) 유튜브 링크 입력창 -->
+        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+          <input type="text" id="refYoutubeInput" placeholder="유튜브 링크 붙여넣기 (예: https://youtu.be/...)" style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #334155; background: #0b0f19; color: #f8fafc; font-size: 0.82rem;" />
+          <button type="button" id="refYoutubeBtn" class="btn outline" style="padding: 6px 12px; font-size: 0.8rem;">불러오기</button>
+        </div>
+
+        <!-- 2) 드래그 앤 드롭 박스 겸 비디오 뷰어 -->
+        <div class="video-wrapper" id="refDropZone" style="border: 2px dashed #334155; cursor: pointer; transition: border-color 0.2s, background 0.2s;">
           <video id="refVideo" controls playsinline></video>
-          <div class="placeholder" id="refPlaceholder">기준 영상을 선택해주세요</div>
+          <iframe id="refYoutubeFrame" style="width: 100%; height: 100%; border: none; display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <div class="placeholder" id="refPlaceholder" style="text-align: center; padding: 16px;">
+            <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">여기로 기준 영상을 끌어다 놓으세요</p>
+            <span style="font-size: 0.78rem; color: #64748b;">또는 클릭하여 파일 선택 / 스마트폰 촬영</span>
+          </div>
         </div>
       </div>
 
+      <!-- [오른쪽] 사용자 영상 카드 -->
       <div class="video-card">
         <div class="card-header">
           <h2>사용자 영상 (연습 영상)</h2>
-          <input type="file" id="userVideoInput" accept="video/*" />
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <!-- 1) 파일 선택 / 스마트폰 카메라 촬영 지원 -->
+            <input type="file" id="userVideoInput" accept="video/*" style="display: none;" />
+            <button type="button" id="userSelectBtn" class="btn secondary" style="padding: 6px 12px; font-size: 0.8rem;">🎥 촬영 / 파일</button>
+          </div>
         </div>
-        <div class="video-wrapper">
+
+        <!-- 3) 유튜브 링크 입력창 -->
+        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+          <input type="text" id="userYoutubeInput" placeholder="유튜브 링크 붙여넣기 (예: https://youtu.be/...)" style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #334155; background: #0b0f19; color: #f8fafc; font-size: 0.82rem;" />
+          <button type="button" id="userYoutubeBtn" class="btn outline" style="padding: 6px 12px; font-size: 0.8rem;">불러오기</button>
+        </div>
+
+        <!-- 2) 드래그 앤 드롭 박스 겸 비디오 뷰어 -->
+        <div class="video-wrapper" id="userDropZone" style="border: 2px dashed #334155; cursor: pointer; transition: border-color 0.2s, background 0.2s;">
           <video id="userVideo" controls playsinline></video>
-          <div class="placeholder" id="userPlaceholder">연습 영상을 선택해주세요</div>
+          <iframe id="userYoutubeFrame" style="width: 100%; height: 100%; border: none; display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <div class="placeholder" id="userPlaceholder" style="text-align: center; padding: 16px;">
+            <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">여기로 연습 영상을 끌어다 놓으세요</p>
+            <span style="font-size: 0.78rem; color: #64748b;">또는 클릭하여 파일 선택 / 스마트폰 촬영</span>
+          </div>
         </div>
       </div>
     </section>

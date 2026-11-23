@@ -1,19 +1,32 @@
 // ==========================================
 // 0. 설정 영역 (Gemini API 키 및 구글 스프레드시트 웹 앱 URL)
 // ==========================================
-let GEMINI_API_KEY = ""; // 비워두면 실행 시 입력창이 뜹니다.
+let GEMINI_API_KEY = ""; // 비워두면 분석 시작 시 입력창이 뜹니다.
 const GEMINI_MODEL = "gemini-2.5-flash";
 
-// 💡 [여기에 입력하세요] 앞서 구글 앱스 스크립트에서 배포 후 복사한 웹 앱 URL을 넣으세요!
-const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxuSfqd0nchQu8v6WpXrfCfvf-Y6fDSawl3Pakd_uKfVcjJlxni_LInhLHNR70W5PJc/exec"; 
+// 구글 앱스 스크립트 배포 후 복사한 웹 앱 URL을 입력하세요
+const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxuSfqd0nchQu8v6WpXrfCfvf-Y6fDSawl3Pakd_uKfVcjJlxni_LInhLHNR70W5PJc/exec";
 
 // DOM 요소 참조
 const refVideoInput = document.getElementById("refVideoInput");
 const userVideoInput = document.getElementById("userVideoInput");
+const refSelectBtn = document.getElementById("refSelectBtn");
+const userSelectBtn = document.getElementById("userSelectBtn");
+
+const refDropZone = document.getElementById("refDropZone");
+const userDropZone = document.getElementById("userDropZone");
+
 const refVideo = document.getElementById("refVideo");
 const userVideo = document.getElementById("userVideo");
+const refYoutubeFrame = document.getElementById("refYoutubeFrame");
+const userYoutubeFrame = document.getElementById("userYoutubeFrame");
 const refPlaceholder = document.getElementById("refPlaceholder");
 const userPlaceholder = document.getElementById("userPlaceholder");
+
+const refYoutubeInput = document.getElementById("refYoutubeInput");
+const refYoutubeBtn = document.getElementById("refYoutubeBtn");
+const userYoutubeInput = document.getElementById("userYoutubeInput");
+const userYoutubeBtn = document.getElementById("userYoutubeBtn");
 
 const syncPlayBtn = document.getElementById("syncPlayBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
@@ -22,43 +35,172 @@ const loadingText = loadingSection.querySelector("p");
 const resultSection = document.getElementById("resultSection");
 const copyCsvBtn = document.getElementById("copyCsvBtn");
 
-let refLoaded = false;
-let userLoaded = false;
+// 상태 관리 (파일 업로드 여부 vs 유튜브 로드 여부)
+let state = {
+  refFile: null,
+  userFile: null,
+  refIsYoutube: false,
+  userIsYoutube: false
+};
 let latestResultRow = null;
 
 // ==========================================
-// 1. 비디오 파일 업로드 및 미리보기 핸들러
+// 1. 로컬 파일 업로드 및 스마트폰 촬영 처리
 // ==========================================
-function handleVideoUpload(inputElement, videoElement, placeholderElement, type) {
-  inputElement.addEventListener("change", (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+function loadLocalVideoFile(file, type) {
+  if (!file || !file.type.startsWith("video/")) {
+    alert("동영상 파일(.mp4, .mov 등)만 업로드할 수 있습니다.");
+    return;
+  }
 
-    const videoURL = URL.createObjectURL(file);
-    videoElement.src = videoURL;
-    videoElement.style.display = "block";
-    placeholderElement.style.display = "none";
+  const videoURL = URL.createObjectURL(file);
 
-    if (type === "ref") refLoaded = true;
-    if (type === "user") userLoaded = true;
+  if (type === "ref") {
+    state.refFile = file;
+    state.refIsYoutube = false;
+    refYoutubeFrame.style.display = "none";
+    refYoutubeFrame.src = "";
+    refPlaceholder.style.display = "none";
+    refVideo.src = videoURL;
+    refVideo.style.display = "block";
+    refDropZone.style.borderStyle = "solid";
+  } else {
+    state.userFile = file;
+    state.userIsYoutube = false;
+    userYoutubeFrame.style.display = "none";
+    userYoutubeFrame.src = "";
+    userPlaceholder.style.display = "none";
+    userVideo.src = videoURL;
+    userVideo.style.display = "block";
+    userDropZone.style.borderStyle = "solid";
+  }
 
-    updateButtonStates();
+  updateButtonStates();
+}
+
+// 버튼 클릭 시 숨겨진 파일 입력창 실행 (모바일에서는 카메라/갤러리 선택창 오픈)
+refSelectBtn.addEventListener("click", () => refVideoInput.click());
+userSelectBtn.addEventListener("click", () => userVideoInput.click());
+
+refVideoInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) loadLocalVideoFile(e.target.files[0], "ref");
+});
+userVideoInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) loadLocalVideoFile(e.target.files[0], "user");
+});
+
+// ==========================================
+// 2. 드래그 앤 드롭 박스 이벤트 설정
+// ==========================================
+function setupDropZone(dropZoneElement, inputElement, type) {
+  // 빈 영역 클릭 시에도 파일 선택창 열기 (비디오 재생 중 클릭과 겹치지 않도록 placeholder 보일 때만)
+  dropZoneElement.addEventListener("click", () => {
+    const placeholder = type === "ref" ? refPlaceholder : userPlaceholder;
+    if (placeholder.style.display !== "none") {
+      inputElement.click();
+    }
+  });
+
+  dropZoneElement.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZoneElement.style.borderColor = "#8b5cf6";
+    dropZoneElement.style.backgroundColor = "rgba(139, 92, 246, 0.08)";
+  });
+
+  dropZoneElement.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    dropZoneElement.style.borderColor = "#334155";
+    dropZoneElement.style.backgroundColor = "#020617";
+  });
+
+  dropZoneElement.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZoneElement.style.borderColor = "#334155";
+    dropZoneElement.style.backgroundColor = "#020617";
+
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) {
+      loadLocalVideoFile(droppedFile, type);
+    }
   });
 }
 
-function updateButtonStates() {
-  const ready = refLoaded && userLoaded;
-  syncPlayBtn.disabled = !ready;
-  analyzeBtn.disabled = !ready;
+setupDropZone(refDropZone, refVideoInput, "ref");
+setupDropZone(userDropZone, userVideoInput, "user");
+
+// ==========================================
+// 3. 유튜브 링크 파싱 및 임베드 재생 처리
+// ==========================================
+function extractYoutubeVideoId(url) {
+  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url.match(regExp);
+  return match ? match[1] : null;
 }
 
-handleVideoUpload(refVideoInput, refVideo, refPlaceholder, "ref");
-handleVideoUpload(userVideoInput, userVideo, userPlaceholder, "user");
+function loadYoutubeVideo(urlInput, type) {
+  const url = urlInput.value.trim();
+  const videoId = extractYoutubeVideoId(url);
+
+  if (!videoId) {
+    alert("올바른 유튜브 링크를 입력해주세요.\n(예: https://www.youtube.com/watch?v=... 또는 https://youtu.be/...)");
+    return;
+  }
+
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
+
+  if (type === "ref") {
+    state.refFile = null;
+    state.refIsYoutube = true;
+    refVideo.pause();
+    refVideo.style.display = "none";
+    refVideo.src = "";
+    refPlaceholder.style.display = "none";
+    refYoutubeFrame.src = embedUrl;
+    refYoutubeFrame.style.display = "block";
+    refDropZone.style.borderStyle = "solid";
+  } else {
+    state.userFile = null;
+    state.userIsYoutube = true;
+    userVideo.pause();
+    userVideo.style.display = "none";
+    userVideo.src = "";
+    userPlaceholder.style.display = "none";
+    userYoutubeFrame.src = embedUrl;
+    userYoutubeFrame.style.display = "block";
+    userDropZone.style.borderStyle = "solid";
+  }
+
+  updateButtonStates();
+}
+
+refYoutubeBtn.addEventListener("click", () => loadYoutubeVideo(refYoutubeInput, "ref"));
+userYoutubeBtn.addEventListener("click", () => loadYoutubeVideo(userYoutubeInput, "user"));
+
+// 엔터키로도 유튜브 링크 바로 불러오기
+refYoutubeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loadYoutubeVideo(refYoutubeInput, "ref");
+});
+userYoutubeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loadYoutubeVideo(userYoutubeInput, "user");
+});
 
 // ==========================================
-// 2. 두 영상 동시 재생 / 일시정지
+// 4. 버튼 활성화 및 로컬 영상 동시 재생 제어
 // ==========================================
+function updateButtonStates() {
+  const bothFilesReady = Boolean(state.refFile && state.userFile);
+  const bothMediaReady = (Boolean(state.refFile) || state.refIsYoutube) && (Boolean(state.userFile) || state.userIsYoutube);
+
+  // 동시 재생 버튼: 두 영상 모두 로컬 파일일 때 정확히 동기화 제어 가능
+  syncPlayBtn.disabled = !bothFilesReady;
+
+  // 유사도 분석 버튼: 두 영상 중 하나라도 준비되면 활성화 (유튜브 포함 시 안내 메시지 출력)
+  analyzeBtn.disabled = !bothMediaReady;
+}
+
 syncPlayBtn.addEventListener("click", () => {
+  if (!state.refFile || !state.userFile) return;
+
   if (refVideo.paused || userVideo.paused) {
     const targetTime = Math.min(refVideo.currentTime, userVideo.currentTime);
     refVideo.currentTime = targetTime;
@@ -73,7 +215,7 @@ syncPlayBtn.addEventListener("click", () => {
 });
 
 // ==========================================
-// 3. 분석 완료 시점에 스프레드시트로 데이터 자동 전송하는 함수
+// 5. 구글 스프레드시트 자동 저장 함수
 // ==========================================
 async function saveResultToGoogleSheet(resultData) {
   if (GOOGLE_SHEET_WEB_APP_URL.includes("YOUR_WEB_APP_URL")) {
@@ -82,12 +224,10 @@ async function saveResultToGoogleSheet(resultData) {
   }
 
   try {
-    const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+    await fetch(GOOGLE_SHEET_WEB_APP_URL, {
       method: "POST",
-      mode: "no-cors", // 브라우저 CORS 이슈 우회용
-      headers: {
-        "Content-Type": "application/json"
-      },
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(resultData)
     });
     console.log("구글 스프레드시트 전송 요청 완료");
@@ -97,10 +237,19 @@ async function saveResultToGoogleSheet(resultData) {
 }
 
 // ==========================================
-// 4. Gemini API 연동 및 영상 유사도 분석 실행
+// 6. Gemini API 연동 및 영상 유사도 분석 실행
 // ==========================================
 analyzeBtn.addEventListener("click", async () => {
-  // API 키 확인
+  if (state.refIsYoutube || state.userIsYoutube) {
+    alert(
+      "유튜브 링크 영상은 화면에서 재생하며 육안으로 비교할 수 있습니다.\n\n" +
+      "AI 자동 점수 채점(Gemini 분석)을 실행하려면 기준 영상과 연습 영상 모두 동영상 파일(.mp4, .mov 등)로 업로드해 주세요!"
+    );
+    return;
+  }
+
+  if (!state.refFile || !state.userFile) return;
+
   if (!GEMINI_API_KEY) {
     const inputKey = prompt("분석을 위해 Gemini API 키를 입력해주세요 (AI Studio에서 발급):");
     if (!inputKey || !inputKey.trim()) {
@@ -110,40 +259,28 @@ analyzeBtn.addEventListener("click", async () => {
     GEMINI_API_KEY = inputKey.trim();
   }
 
-  const refFile = refVideoInput.files[0];
-  const userFile = userVideoInput.files[0];
-  if (!refFile || !userFile) return;
-
   resultSection.classList.add("hidden");
   loadingSection.classList.remove("hidden");
   analyzeBtn.disabled = true;
 
   try {
-    // 단계 1: 기준 영상 & 사용자 영상을 Gemini Files API에 업로드
     loadingText.textContent = "1/3. 기준 영상과 연습 영상을 Gemini 서버로 전송 중입니다...";
     const [refFileInfo, userFileInfo] = await Promise.all([
-      uploadToGeminiFileAPI(refFile, "reference_video"),
-      uploadToGeminiFileAPI(userFile, "user_video")
+      uploadToGeminiFileAPI(state.refFile, "reference_video"),
+      uploadToGeminiFileAPI(state.userFile, "user_video")
     ]);
 
-    // 단계 2: 서버 측 비디오 프레임 처리(ACTIVE 상태) 대기
     loadingText.textContent = "2/3. 영상 프레임을 디코딩하고 관절 움직임을 추출 중입니다...";
     await Promise.all([
       waitForFileActive(refFileInfo.name),
       waitForFileActive(userFileInfo.name)
     ]);
 
-    // 단계 3: 두 영상 비교 및 유사도 분석 요청
     loadingText.textContent = "3/3. 안무 동작 각도 및 타이밍 유사도를 채점 중입니다...";
     const aiAnalysis = await analyzeVideosWithGemini(refFileInfo, userFileInfo);
 
-    // 1) 메타데이터와 AI 분석 결과 결합
-    const fullResult = buildFinalRecord(aiAnalysis, refFile.name, userFile.name);
-    
-    // 2) 화면에 결과 렌더링
+    const fullResult = buildFinalRecord(aiAnalysis, state.refFile.name, state.userFile.name);
     renderResult(fullResult);
-
-    // 💡 [핵심 위치] 3단계 분석 완료 후 스프레드시트로 데이터 자동 전송 함수 호출!
     saveResultToGoogleSheet(fullResult);
 
     loadingSection.classList.add("hidden");
@@ -157,9 +294,6 @@ analyzeBtn.addEventListener("click", async () => {
   }
 });
 
-/**
- * Gemini Files API를 통해 비디오 파일을 업로드하고 file 객체 반환
- */
 async function uploadToGeminiFileAPI(file, displayName) {
   const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`;
 
@@ -183,9 +317,6 @@ async function uploadToGeminiFileAPI(file, displayName) {
   return data.file;
 }
 
-/**
- * 업로드된 비디오 파일이 'ACTIVE' 상태가 될 때까지 폴링 대기
- */
 async function waitForFileActive(fileName) {
   const checkUrl = `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`;
 
@@ -196,9 +327,7 @@ async function waitForFileActive(fileName) {
     }
 
     const fileData = await response.json();
-    if (fileData.state === "ACTIVE") {
-      return fileData;
-    }
+    if (fileData.state === "ACTIVE") return fileData;
     if (fileData.state === "FAILED") {
       throw new Error("Gemini 서버에서 비디오 처리에 실패했습니다.");
     }
@@ -209,9 +338,6 @@ async function waitForFileActive(fileName) {
   throw new Error("비디오 처리 대기 시간이 초과되었습니다.");
 }
 
-/**
- * 두 영상을 함께 전달하여 안무 유사도 분석 JSON 결과 요청
- */
 async function analyzeVideosWithGemini(refFileInfo, userFileInfo) {
   const generateUrl = `https://generativelanguage.googleapis.com/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -232,18 +358,8 @@ async function analyzeVideosWithGemini(refFileInfo, userFileInfo) {
     contents: [
       {
         parts: [
-          {
-            file_data: {
-              mime_type: refFileInfo.mimeType,
-              file_uri: refFileInfo.uri
-            }
-          },
-          {
-            file_data: {
-              mime_type: userFileInfo.mimeType,
-              file_uri: userFileInfo.uri
-            }
-          },
+          { file_data: { mime_type: refFileInfo.mimeType, file_uri: refFileInfo.uri } },
+          { file_data: { mime_type: userFileInfo.mimeType, file_uri: userFileInfo.uri } },
           { text: promptText }
         ]
       }
@@ -295,7 +411,7 @@ async function analyzeVideosWithGemini(refFileInfo, userFileInfo) {
 }
 
 // ==========================================
-// 5. 데이터 결합 및 결과 화면 렌더링
+// 7. 결과 데이터 결합 및 화면 출력
 // ==========================================
 function buildFinalRecord(aiResult, refFileName, userFileName) {
   const now = new Date();
@@ -332,7 +448,6 @@ function renderResult(data) {
   document.getElementById("errorTimestamps").textContent = data.error_timestamps;
   document.getElementById("feedbackSummary").textContent = data.feedback_summary;
 
-  // 구글 스프레드시트 열 순서에 맞춘 탭 구분(TSV) 문자열 저장 (클립보드 복사 용도)
   latestResultRow = [
     data.analysis_id,
     data.analyzed_at,
@@ -349,9 +464,6 @@ function renderResult(data) {
   ].join("\t");
 }
 
-// ==========================================
-// 6. 스프레드시트 붙여넣기용 데이터 클립보드 복사
-// ==========================================
 copyCsvBtn.addEventListener("click", () => {
   if (!latestResultRow) return;
 
