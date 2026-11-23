@@ -5,17 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>안무 유사도 분석기 & 성장 기록</title>
     <style>
-        /* 모바일 퍼스트 및 전반적인 레이아웃 기본 설정 */
+        /* 다크 테마 & 보라색 포인트 전역 설정 */
         * { box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             margin: 0; 
             padding: 15px; 
-            background: #f4f4f9; 
-            color: #333; 
+            background: #0f172a; /* 짙은 다크 네이비 배경 */
+            color: #f8fafc;      /* 밝은 텍스트 */
         }
-        h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
-        h2, h3, h4 { margin-top: 0; }
+        h1 { 
+            text-align: center; 
+            font-size: 24px; 
+            margin-bottom: 24px; 
+            color: #c4b5fd;      /* 연보라색 타이틀 */
+        }
+        h2, h3, h4 { margin-top: 0; color: #e2e8f0; }
 
         /* 비디오 컨테이너 (반응형 플렉스박스) */
         .container { 
@@ -26,12 +31,13 @@
             margin-bottom: 20px; 
         }
         
-        /* 개별 카드 박스 (PC 기준 가로 400px, 모바일에서는 100% 꽉 참) */
+        /* 개별 카드 박스 */
         .box { 
-            background: white; 
-            padding: 15px; 
+            background: #1e293b; /* 다크 슬레이트 카드 배경 */
+            border: 1px solid #334155;
+            padding: 16px; 
             border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
             width: 100%; 
             max-width: 400px; 
         }
@@ -40,53 +46,72 @@
         video { 
             width: 100%; 
             height: auto; 
-            aspect-ratio: 16 / 9; /* 모바일에서 깨지지 않는 16:9 비율 고정 */
+            aspect-ratio: 16 / 9;
             border-radius: 8px; 
             background: #000; 
-            margin-top: 10px; 
+            margin-top: 12px; 
             object-fit: cover;
+            border: 1px solid #475569;
         }
 
-        /* 파일 업로드 버튼 스타일링 개선 */
+        /* 파일 업로드 버튼 다크 스타일 */
         input[type="file"] {
             width: 100%;
             padding: 8px;
             font-size: 14px;
-            background: #f9fafb;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
+            background: #0f172a;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+            border-radius: 8px;
             margin-top: 5px;
+        }
+        input[type="file"]::file-selector-button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-weight: bold;
         }
 
         /* 컨트롤 및 공통 패널 */
-        .control-panel { text-align: center; margin: 20px 0; }
+        .control-panel { text-align: center; margin: 24px 0; }
         
         .panel {
-            background: white;
+            background: #1e293b;
+            border: 1px solid #334155;
             width: 100%;
-            max-width: 835px; /* PC에서 비디오 박스 2개 너비와 조화롭게 맞춤 */
+            max-width: 815px;
             margin: 20px auto;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             text-align: center;
         }
         #save-panel { display: none; }
 
-        /* 입력창 및 셀렉트박스 모바일 맞춤 */
+        /* 입력창 및 셀렉트박스 다크 맞춤 */
         .panel input, .panel select {
             width: 100%;
             max-width: 400px;
             padding: 12px;
             margin: 10px 0;
-            border: 1px solid #d1d5db;
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #475569;
             border-radius: 8px;
-            font-size: 16px; /* 모바일에서 폰트가 16사 미만이면 자동 확대되는 현상 방지 */
+            font-size: 16px;
+        }
+        .panel input:focus, .panel select:focus {
+            outline: none;
+            border-color: #8b5cf6; /* 포커스 시 보라색 테두리 */
         }
 
-        /* 터치하기 편한 큼직한 버튼 디자인 */
+        /* 보라색 포인트 메인 버튼 */
         button { 
-            background: #4f46e5; 
+            background: #8b5cf6; 
             color: white; 
             border: none; 
             padding: 14px 24px; 
@@ -96,23 +121,29 @@
             cursor: pointer; 
             width: 100%;
             max-width: 400px;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
         }
-        button:hover { background: #4338ca; }
-        button:disabled { background: #a5b4fc; cursor: not-allowed; }
+        button:hover { background: #7c3aed; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #4c1d95; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
 
-        #save-btn { background: #10b981; }
+        /* 저장 버튼 (에메랄드/보라 조화) */
+        #save-btn { 
+            background: #10b981; 
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+        }
         #save-btn:hover { background: #059669; }
         
         #result-box { 
             text-align: center; 
-            font-size: 20px; 
+            font-size: 22px; 
             font-weight: bold; 
-            margin-top: 15px; 
-            color: #4f46e5; 
+            margin-top: 16px; 
+            color: #a78bfa; /* 밝은 보라색 결과 텍스트 */
         }
         
-        #save-status { margin-top: 10px; font-size: 14px; color: #555; }
+        #save-status { margin-top: 10px; font-size: 14px; color: #94a3b8; }
 
         /* 그래프 캔버스 영역 */
         canvas { 
@@ -120,11 +151,13 @@
             height: auto !important; 
             max-height: 300px;
             margin-top: 15px; 
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 8px;
         }
 
-        /* 미디어 쿼리: 화면이 넓은 PC 환경에서는 버튼 크기를 내용물에 맞게 조절 */
         @media(min-width: 768px) {
-            button { width: auto; min-width: 200px; }
+            button { width: auto; min-width: 220px; }
         }
     </style>
 
@@ -137,7 +170,7 @@
 </head>
 <body>
 
-    <h1>댄스 유사도 분석 & 성장 기록</h1>
+    <h1>💃 댄스 유사도 분석 & 성장 기록</h1>
 
     <div class="container">
         <!-- 원본 영상 영역 -->
@@ -163,7 +196,7 @@
     <!-- 분석 완료 후 나타나는 구글 시트 저장 창 -->
     <div id="save-panel" class="panel">
         <h4>📊 연습 기록 저장하기</h4>
-        <p style="font-size: 14px; color: #666;">연습한 곡(무리) 이름을 입력하거나 선택하세요.</p>
+        <p style="font-size: 14px; color: #94a3b8;">연습한 곡(무리) 이름을 입력하면 날짜별 그래프로 묶어볼 수 있습니다.</p>
         <input type="text" id="group-name-input" placeholder="예: 뉴진스 - Super Shy">
         <br>
         <button id="save-btn">구글 시트에 저장하기</button>
@@ -174,7 +207,7 @@
     <div class="panel">
         <h4>📈 나의 실력 성장 그래프</h4>
         <div style="margin-bottom: 10px;">
-            <label for="group-select" style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px;">조회할 곡 선택: </label>
+            <label for="group-select" style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px; color: #cbd5e1;">조회할 곡 선택:</label>
             <select id="group-select">
                 <option value="">-- 곡을 선택하세요 --</option>
             </select>
