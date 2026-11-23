@@ -27,7 +27,7 @@ let currentScore = null;
 let allRecords = [];
 let scoreChart = null;
 
-// 영상 파일을 받아 화면에 표시하는 함수
+// 영상 파일을 받아 빈 칸(드롭존)을 숨기고 비디오를 띄우는 함수
 function loadVideoToPlayer(file, videoElement, dropZoneElement) {
     if (!file || !file.type.startsWith('video/')) {
         alert("동영상 파일만 업로드할 수 있습니다.");
@@ -77,16 +77,11 @@ userCameraFile.addEventListener('change', (e) => {
 
 // 기존 곡 드롭다운 선택 시 입력창 자동 채우기
 existingGroupSelect.addEventListener('change', (e) => {
-    if (e.target.value) {
-        groupNameInput.value = e.target.value;
-    } else {
-        groupNameInput.value = "";
-    }
+    groupNameInput.value = e.target.value ? e.target.value : "";
 });
 
-// 코사인 유사도 계산 (관절 중심점 정규화 포함)
+// 관절 좌표 중심점 정규화
 function normalizeKeypoints(keypoints) {
-    // 골반 중심(왼쪽 골반 11, 오른쪽 골반 12)을 기준으로 좌표 정규화하여 위치/크기 차이 보정
     const leftHip = keypoints[11];
     const rightHip = keypoints[12];
     const centerX = (leftHip.x + rightHip.x) / 2;
@@ -95,6 +90,7 @@ function normalizeKeypoints(keypoints) {
     return keypoints.flatMap(kp => [kp.x - centerX, kp.y - centerY]);
 }
 
+// 코사인 유사도 계산
 function calculateCosineSimilarity(vectorA, vectorB) {
     let dotProduct = 0;
     let normA = 0;
@@ -108,7 +104,7 @@ function calculateCosineSimilarity(vectorA, vectorB) {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-// 비디오 특정 시간으로 이동 후 프레임 로드 대기
+// 비디오 특정 시간 이동 후 로드 대기
 function seekVideo(video, time) {
     return new Promise((resolve) => {
         video.currentTime = time;
@@ -116,7 +112,7 @@ function seekVideo(video, time) {
     });
 }
 
-// 1. 정밀 유사도 분석 실행 (전체 구간 샘플링)
+// 1. 유사도 분석 실행
 analyzeBtn.addEventListener('click', async () => {
     if (!refVideo.src || !userVideo.src) {
         alert("원본 영상과 내 연습 영상 파일을 모두 업로드해주세요!");
@@ -132,7 +128,6 @@ analyzeBtn.addEventListener('click', async () => {
         const detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
         const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
 
-        // 두 영상 중 짧은 길이를 기준으로 0.5초 간격 분석 (최대 15초 샘플링으로 속도 최적화)
         const duration = Math.min(refVideo.duration || 5, userVideo.duration || 5, 15);
         const step = 0.5;
         let totalSimilarity = 0;
@@ -216,7 +211,7 @@ saveBtn.addEventListener('click', async () => {
     }
 });
 
-// 3. 구글 시트에서 기록을 불러와 드롭다운 채우기
+// 3. 구글 시트에서 기록 불러오기
 async function fetchRecordsAndSetupDropdown() {
     if (APPS_SCRIPT_URL.includes("여기에_본인_스크립트_ID_입력")) return;
 
@@ -226,9 +221,7 @@ async function fetchRecordsAndSetupDropdown() {
 
         const groups = [...new Set(allRecords.map(r => r.groupName))];
 
-        // 그래프 조회용 드롭다운 채우기
         groupSelect.innerHTML = '<option value="">-- 곡을 선택하세요 --</option>';
-        // 저장용 기존 그룹 드롭다운 채우기
         existingGroupSelect.innerHTML = '<option value="">-- 새 곡(그룹) 직접 입력 --</option>';
 
         groups.forEach(g => {
@@ -247,7 +240,7 @@ async function fetchRecordsAndSetupDropdown() {
     }
 }
 
-// 4. 드롭다운 선택 시 꺾은선 그래프(Chart.js) 업데이트
+// 4. 꺾은선 그래프(Chart.js) 업데이트
 groupSelect.addEventListener('change', (e) => {
     const selectedGroup = e.target.value;
     const filtered = allRecords.filter(r => r.groupName === selectedGroup);
