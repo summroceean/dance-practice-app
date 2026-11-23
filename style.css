@@ -26,22 +26,19 @@ body {
   justify-content: center;
   align-items: stretch;
   overflow-x: hidden;
-  padding: 16px 24px;
+  padding: 20px 24px 48px;
 }
 
 .app-container {
   width: 96%;
   max-width: 1600px;
-  min-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
 }
 
 .app-header {
   text-align: center;
-  flex-shrink: 0;
   padding-top: 4px;
 }
 
@@ -66,7 +63,6 @@ body {
   padding: 14px 20px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
 }
 
 .input-group {
@@ -101,8 +97,7 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   width: 100%;
-  flex: 1;
-  min-height: 420px;
+  min-height: 400px;
 }
 
 .video-card {
@@ -113,7 +108,6 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
 }
 
 .card-header {
@@ -122,7 +116,6 @@ body {
   align-items: center;
   margin-bottom: 12px;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .card-header h2 {
@@ -136,7 +129,6 @@ body {
   display: flex;
   gap: 6px;
   margin-bottom: 12px;
-  flex-shrink: 0;
 }
 
 .youtube-input-group input {
@@ -158,7 +150,7 @@ body {
   position: relative;
   width: 100%;
   flex: 1;
-  min-height: 320px;
+  min-height: 310px;
   background: #020617;
   border-radius: 10px;
   overflow: hidden;
@@ -185,18 +177,18 @@ video {
   display: flex;
   justify-content: center;
   gap: 16px;
-  flex-shrink: 0;
   padding: 4px 0;
 }
 
 .btn {
   padding: 12px 28px;
   border-radius: 10px;
-  font-size: 0.96rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn:disabled {
@@ -243,7 +235,6 @@ video {
   padding: 24px;
   background: var(--bg-card);
   border-radius: 12px;
-  flex-shrink: 0;
 }
 
 .spinner {
@@ -260,12 +251,12 @@ video {
   to { transform: rotate(360deg); }
 }
 
+/* 결과 대시보드 */
 .result-section {
   background: var(--bg-card);
   border-radius: 14px;
-  padding: 20px;
+  padding: 22px;
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
 }
 
 .result-section h2 {
@@ -314,7 +305,7 @@ video {
   gap: 8px;
   font-size: 0.9rem;
   color: #cbd5e1;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .detail-box strong {
@@ -322,9 +313,105 @@ video {
   margin-right: 6px;
 }
 
-.export-actions {
+/* 곡(무리) 선택 및 기록 저장 UI */
+.save-group-box {
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.save-group-box h3 {
+  font-size: 1rem;
+  color: #e9d5ff;
+  margin-bottom: 4px;
+}
+
+.save-desc {
+  font-size: 0.84rem;
+  color: var(--text-sub);
+  margin-bottom: 12px;
+}
+
+.save-controls {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.styled-select,
+.styled-input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  outline: none;
+  min-width: 220px;
+}
+
+.styled-select:focus,
+.styled-input:focus {
+  border-color: var(--primary-purple);
+}
+
+.styled-input {
+  flex: 1;
+}
+
+/* 그래프 섹션 */
+.chart-section {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid var(--border-color);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.chart-header h2 {
+  font-size: 1.15rem;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.chart-sub {
+  font-size: 0.84rem;
+  color: var(--text-sub);
+}
+
+.chart-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: var(--bg-main);
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-empty {
+  color: var(--text-sub);
+  font-size: 0.92rem;
+  text-align: center;
 }
 
 .hidden {

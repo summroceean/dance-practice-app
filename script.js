@@ -4,7 +4,7 @@
 let GEMINI_API_KEY = ""; // 비워두면 분석 시작 시 입력창이 뜹니다.
 const GEMINI_MODEL = "gemini-2.5-flash";
 
-// 💡 여기에 구글 앱스 스크립트 배포 후 복사한 웹 앱 URL을 넣으세요!
+// 💡 여기에 새로 배포한 구글 앱스 스크립트 웹 앱 URL을 입력하세요!
 const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxuSfqd0nchQu8v6WpXrfCfvf-Y6fDSawl3Pakd_uKfVcjJlxni_LInhLHNR70W5PJc/exec";
 
 // DOM 요소 참조
@@ -23,10 +23,27 @@ const analyzeBtn = document.getElementById("analyzeBtn");
 const loadingSection = document.getElementById("loadingSection");
 const loadingText = loadingSection.querySelector("p");
 const resultSection = document.getElementById("resultSection");
-const copyCsvBtn = document.getElementById("copyCsvBtn");
+
+// 저장 UI 요소
+const saveSongSelect = document.getElementById("saveSongSelect");
+const newSongInput = document.getElementById("newSongInput");
+const saveRecordBtn = document.getElementById("saveRecordBtn");
+
+// 그래프 UI 요소
+const chartSongSelect = document.getElementById("chartSongSelect");
+const refreshChartBtn = document.getElementById("refreshChartBtn");
+const scoreHistoryCanvas = document.getElementById("scoreHistoryChart");
+const chartEmptyState = document.getElementById("chartEmptyState");
 
 let userFile = null;
-let latestResultRow = null;
+let currentAnalysisRecord = null; // 현재 분석 완료된 임시 데이터
+let allSheetRecords = []; // 스프레드시트에서 불러온 전체 기록 캐시
+let scoreChartInstance = null; // Chart.js 인스턴스
+
+// 페이지 로드 시 스프레드시트에서 기존 곡 목록 및 기록 불러오기
+window.addEventListener("DOMContentLoaded", () => {
+  fetchSheetRecordsAndPopulateUI();
+});
 
 // ==========================================
 // 1. 유튜브 링크 불러오기 처리 (왼쪽 화면)
@@ -111,29 +128,7 @@ userDropZone.addEventListener("drop", (e) => {
 });
 
 // ==========================================
-// 3. 구글 스프레드시트 자동 전송 함수
-// ==========================================
-async function saveResultToGoogleSheet(resultData) {
-  if (GOOGLE_SHEET_WEB_APP_URL.includes("YOUR_WEB_APP_URL")) {
-    console.warn("웹 앱 URL이 설정되지 않아 스프레드시트 저장을 건너뜁니다.");
-    return;
-  }
-
-  try {
-    await fetch(GOOGLE_SHEET_WEB_APP_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(resultData)
-    });
-    console.log("구글 스프레드시트 전송 요청 완료");
-  } catch (err) {
-    console.error("구글 스프레드시트 전송 실패:", err);
-  }
-}
-
-// ==========================================
-// 4. Gemini API 연동 및 유사도 분석 실행
+// 3. Gemini API 연동 및 유사도 분석 실행
 // ==========================================
 analyzeBtn.addEventListener("click", async () => {
   if (!userFile) return;
@@ -161,9 +156,20 @@ analyzeBtn.addEventListener("click", async () => {
     loadingText.textContent = "3/3. 안무 동작 및 타이밍 일치도를 채점 중입니다...";
     const aiAnalysis = await analyzeVideosWithGemini(userFileInfo);
 
-    const fullResult = buildFinalRecord(aiAnalysis, userFile.name);
-    renderResult(fullResult);
-    saveResultToGoogleSheet(fullResult);
+    // 임시 결과 객체 생성 (아직 시트에는 저장 전)
+    currentAnalysisRecord = buildFinalRecord(aiAnalysis, userFile.name);
+    renderResult(currentAnalysisRecord);
+
+    // 상단 기본 곡명 칸에 미리 적어둔 값이 있다면 새 곡 입력창에 기본값으로 채워주기
+    const prefilledSong = document.getElementById("songTitle").value.trim();
+    if (prefilledSong) {
+      saveSongSelect.value = "__NEW__";
+      newSongInput.classList.remove("hidden");
+      newSongInput.value = prefilledSong;
+    }
+
+    saveRecordBtn.disabled = false;
+    saveRecordBtn.textContent = "기록 저장하기";
 
     loadingSection.classList.add("hidden");
     resultSection.classList.remove("hidden");
@@ -204,19 +210,14 @@ async function waitForFileActive(fileName) {
 
   for (let attempt = 0; attempt < 30; attempt++) {
     const response = await fetch(checkUrl);
-    if (!response.ok) {
-      throw new Error("파일 상태 확인 중 오류가 발생했습니다.");
-    }
+    if (!response.ok) throw new Error("파일 상태 확인 중 오류가 발생했습니다.");
 
     const fileData = await response.json();
     if (fileData.state === "ACTIVE") return fileData;
-    if (fileData.state === "FAILED") {
-      throw new Error("Gemini 서버에서 비디오 처리에 실패했습니다.");
-    }
+    if (fileData.state === "FAILED") throw new Error("Gemini 서버에서 비디오 처리에 실패했습니다.");
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
-
   throw new Error("비디오 처리 대기 시간이 초과되었습니다.");
 }
 
@@ -283,31 +284,24 @@ async function analyzeVideosWithGemini(userFileInfo) {
 
   const data = await response.json();
   const rawJsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!rawJsonText) {
-    throw new Error("Gemini로부터 유효한 분석 응답을 받지 못했습니다.");
-  }
+  if (!rawJsonText) throw new Error("Gemini로부터 유효한 분석 응답을 받지 못했습니다.");
 
   return JSON.parse(rawJsonText);
 }
 
-// ==========================================
-// 5. 결과 데이터 결합 및 화면 출력
-// ==========================================
 function buildFinalRecord(aiResult, userFileName) {
   const now = new Date();
   const formattedDate = now.toISOString().replace("T", " ").substring(0, 16);
   const analysisId = "ANL-" + Math.floor(1000 + Math.random() * 9000);
 
   const userId = document.getElementById("userId").value.trim() || "guest_user";
-  const songTitle = document.getElementById("songTitle").value.trim() || "미지정 안무";
   const refYoutubeUrl = refYoutubeInput.value.trim() || "유튜브 링크 미입력";
 
   return {
     analysis_id: analysisId,
     analyzed_at: formattedDate,
     user_id: userId,
-    song_title: songTitle,
+    song_title: "", // 사용자가 저장 UI에서 선택한 최종 곡 이름이 들어감
     reference_video_url: refYoutubeUrl,
     user_video_url: userFileName,
     total_similarity_score: Number(aiResult.total_similarity_score).toFixed(1),
@@ -329,31 +323,263 @@ function renderResult(data) {
   document.getElementById("bodyPartScores").textContent = data.body_part_scores;
   document.getElementById("errorTimestamps").textContent = data.error_timestamps;
   document.getElementById("feedbackSummary").textContent = data.feedback_summary;
-
-  latestResultRow = [
-    data.analysis_id,
-    data.analyzed_at,
-    data.user_id,
-    data.song_title,
-    data.reference_video_url,
-    data.user_video_url,
-    data.total_similarity_score,
-    data.pose_accuracy,
-    data.timing_accuracy,
-    data.body_part_scores,
-    data.error_timestamps,
-    data.feedback_summary
-  ].join("\t");
 }
 
-copyCsvBtn.addEventListener("click", () => {
-  if (!latestResultRow) return;
-
-  navigator.clipboard.writeText(latestResultRow).then(() => {
-    const originalText = copyCsvBtn.textContent;
-    copyCsvBtn.textContent = "✅ 복사 완료! 시트에 Ctrl+V로 붙여넣으세요";
-    setTimeout(() => {
-      copyCsvBtn.textContent = originalText;
-    }, 2500);
-  });
+// ==========================================
+// 4. 곡(무리) 선택 및 스프레드시트 저장 UI 제어
+// ==========================================
+// 드롭다운에서 '+ 새 곡 추가'를 고를 때만 텍스트 입력창 표시
+saveSongSelect.addEventListener("change", () => {
+  if (saveSongSelect.value === "__NEW__") {
+    newSongInput.classList.remove("hidden");
+    newSongInput.focus();
+  } else {
+    newSongInput.classList.add("hidden");
+  }
 });
+
+// [기록 저장하기] 버튼 클릭 시 스프레드시트로 전송
+saveRecordBtn.addEventListener("click", async () => {
+  if (!currentAnalysisRecord) {
+    alert("먼저 연습 영상을 분석해주세요.");
+    return;
+  }
+
+  let selectedSongName = "";
+  if (saveSongSelect.value === "__NEW__") {
+    selectedSongName = newSongInput.value.trim();
+    if (!selectedSongName) {
+      alert("새로 추가할 곡(무리) 이름을 입력해주세요!");
+      newSongInput.focus();
+      return;
+    }
+  } else {
+    selectedSongName = saveSongSelect.value;
+  }
+
+  if (GOOGLE_SHEET_WEB_APP_URL.includes("YOUR_WEB_APP_URL")) {
+    alert("script.js 상단의 GOOGLE_SHEET_WEB_APP_URL에 웹 앱 주소를 먼저 입력해주세요.");
+    return;
+  }
+
+  // 최종 곡 이름을 기록 객체에 반영
+  currentAnalysisRecord.song_title = selectedSongName;
+
+  saveRecordBtn.disabled = true;
+  saveRecordBtn.textContent = "저장 중...";
+
+  try {
+    await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(currentAnalysisRecord)
+    });
+
+    saveRecordBtn.textContent = "✅ 저장 완료!";
+    newSongInput.value = "";
+
+    // 스프레드시트에 데이터가 반영될 시간을 잠시 둔 뒤 그래프 및 드롭다운 갱신
+    setTimeout(async () => {
+      await fetchSheetRecordsAndPopulateUI(selectedSongName);
+    }, 1200);
+  } catch (err) {
+    console.error("스프레드시트 저장 실패:", err);
+    alert("저장 중 오류가 발생했습니다.");
+    saveRecordBtn.disabled = false;
+    saveRecordBtn.textContent = "기록 저장하기";
+  }
+});
+
+// ==========================================
+// 5. 스프레드시트 기록 조회 및 Chart.js 꺾은선 그래프 렌더링
+// ==========================================
+async function fetchSheetRecordsAndPopulateUI(autoSelectSong = null) {
+  if (GOOGLE_SHEET_WEB_APP_URL.includes("YOUR_WEB_APP_URL")) {
+    chartSongSelect.innerHTML = `<option value="">웹 앱 URL 설정 필요</option>`;
+    showEmptyChart("script.js에 구글 웹 앱 URL을 설정하면 저장된 곡 그래프가 표시됩니다.");
+    return;
+  }
+
+  try {
+    const response = await fetch(GOOGLE_SHEET_WEB_APP_URL);
+    const data = await response.json();
+
+    if (data.status !== "success") {
+      throw new Error(data.message || "데이터 조회 실패");
+    }
+
+    allSheetRecords = data.records || [];
+
+    // 중복 없는 곡(무리) 이름 목록 추출
+    const uniqueSongs = [...new Set(
+      allSheetRecords
+        .map((r) => r.song_title)
+        .filter((title) => title && title !== "미지정 안무" && title !== "미지정 곡")
+    )];
+
+    updateDropdownMenus(uniqueSongs, autoSelectSong);
+  } catch (err) {
+    console.error("시트 데이터 조회 오류:", err);
+    chartSongSelect.innerHTML = `<option value="">데이터 불러오기 실패</option>`;
+  }
+}
+
+function updateDropdownMenus(uniqueSongs, autoSelectSong) {
+  // 1) 저장용 드롭다운 채우기 (기존 곡 목록 + 맨 아래 '+ 새 곡 추가')
+  saveSongSelect.innerHTML = "";
+  uniqueSongs.forEach((song) => {
+    const opt = document.createElement("option");
+    opt.value = song;
+    opt.textContent = `📁 ${song}`;
+    saveSongSelect.appendChild(opt);
+  });
+
+  const newOpt = document.createElement("option");
+  newOpt.value = "__NEW__";
+  newOpt.textContent = "+ 새 곡 추가 (직접 입력)";
+  saveSongSelect.appendChild(newOpt);
+
+  // 기존 곡이 하나라도 있으면 첫 번째 곡(또는 방금 저장한 곡) 선택 상태로 두고 입력창 숨기기
+  if (autoSelectSong && uniqueSongs.includes(autoSelectSong)) {
+    saveSongSelect.value = autoSelectSong;
+    newSongInput.classList.add("hidden");
+  } else if (uniqueSongs.length > 0) {
+    saveSongSelect.value = uniqueSongs[0];
+    newSongInput.classList.add("hidden");
+  } else {
+    saveSongSelect.value = "__NEW__";
+    newSongInput.classList.remove("hidden");
+  }
+
+  // 2) 그래프 조회용 드롭다운 채우기
+  chartSongSelect.innerHTML = "";
+  if (uniqueSongs.length === 0) {
+    chartSongSelect.innerHTML = `<option value="">저장된 곡 기록이 없습니다</option>`;
+    showEmptyChart("아직 저장된 연습 기록이 없습니다. 영상을 분석하고 첫 기록을 저장해보세요!");
+    return;
+  }
+
+  uniqueSongs.forEach((song) => {
+    const opt = document.createElement("option");
+    opt.value = song;
+    opt.textContent = song;
+    chartSongSelect.appendChild(opt);
+  });
+
+  const targetSongForChart = (autoSelectSong && uniqueSongs.includes(autoSelectSong))
+    ? autoSelectSong
+    : uniqueSongs[0];
+
+  chartSongSelect.value = targetSongForChart;
+  renderSongProgressChart(targetSongForChart);
+}
+
+// 그래프 드롭다운에서 다른 곡을 고를 때 그래프 다시 그리기
+chartSongSelect.addEventListener("change", () => {
+  const selected = chartSongSelect.value;
+  if (selected) {
+    renderSongProgressChart(selected);
+  }
+});
+
+refreshChartBtn.addEventListener("click", () => {
+  fetchSheetRecordsAndPopulateUI(chartSongSelect.value);
+});
+
+function showEmptyChart(message) {
+  if (scoreChartInstance) {
+    scoreChartInstance.destroy();
+    scoreChartInstance = null;
+  }
+  scoreHistoryCanvas.style.display = "none";
+  chartEmptyState.textContent = message;
+  chartEmptyState.classList.remove("hidden");
+}
+
+function renderSongProgressChart(songName) {
+  // 선택한 곡의 기록만 필터링
+  const filtered = allSheetRecords.filter((r) => r.song_title === songName);
+
+  if (filtered.length === 0) {
+    showEmptyChart(`'${songName}' 곡에 대한 연습 기록이 없습니다.`);
+    return;
+  }
+
+  chartEmptyState.classList.add("hidden");
+  scoreHistoryCanvas.style.display = "block";
+
+  // X축: 날짜(타임스탬프), Y축: 종합 유사도, 포즈 정확도, 타이밍 일치도
+  const labels = filtered.map((r, idx) => `${idx + 1}회차 (${r.analyzed_at})`);
+  const totalScores = filtered.map((r) => r.total_similarity_score);
+  const poseScores = filtered.map((r) => r.pose_accuracy);
+  const timingScores = filtered.map((r) => r.timing_accuracy);
+
+  if (scoreChartInstance) {
+    scoreChartInstance.destroy();
+  }
+
+  const ctx = scoreHistoryCanvas.getContext("2d");
+  scoreChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "종합 유사도 (%)",
+          data: totalScores,
+          borderColor: "#8b5cf6",
+          backgroundColor: "rgba(139, 92, 246, 0.2)",
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: "#c4b5fd",
+          tension: 0.25,
+          fill: true
+        },
+        {
+          label: "포즈 정확도 (%)",
+          data: poseScores,
+          borderColor: "#38bdf8",
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 4,
+          tension: 0.25
+        },
+        {
+          label: "타이밍 일치도 (%)",
+          data: timingScores,
+          borderColor: "#34d399",
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 4,
+          tension: 0.25
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { color: "#94a3b8" },
+          grid: { color: "#1e293b" }
+        },
+        x: {
+          ticks: { color: "#94a3b8", maxRotation: 15 },
+          grid: { color: "#1e293b" }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: { color: "#f8fafc", font: { size: 12 } }
+        },
+        tooltip: {
+          mode: "index",
+          intersect: false
+        }
+      }
+    }
+  });
+}
