@@ -3,8 +3,14 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWRReORXZ1s9jV
 
 const refVideoFile = document.getElementById('ref-video-file');
 const userVideoFile = document.getElementById('user-video-file');
+const userCameraFile = document.getElementById('user-camera-file');
+
+const refDropZone = document.getElementById('ref-drop-zone');
+const userDropZone = document.getElementById('user-drop-zone');
+
 const refVideo = document.getElementById('ref-video');
 const userVideo = document.getElementById('user-video');
+
 const analyzeBtn = document.getElementById('analyze-btn');
 const resultBox = document.getElementById('result-box');
 
@@ -20,15 +26,58 @@ let currentScore = null;
 let allRecords = [];
 let scoreChart = null;
 
-// 파일 업로드 미리보기 연결
+// 영상 파일을 받아 화면에 표시하는 공통 함수 (드롭존 숨기고 비디오 표시)
+function loadVideoToPlayer(file, videoElement, dropZoneElement) {
+    if (!file || !file.type.startsWith('video/')) {
+        alert("동영상 파일만 업로드할 수 있습니다.");
+        return;
+    }
+    videoElement.src = URL.createObjectURL(file);
+    dropZoneElement.style.display = "none";
+    videoElement.style.display = "block";
+}
+
+// 드래그 앤 드롭 및 클릭 이벤트 설정 함수
+function setupDropZone(dropZone, fileInput, videoElement) {
+    // 클릭 시 파일 선택 창 열기
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // 파일 드래그 진입 시 하이라이트
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    // 파일 드롭 시 영상 로드
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            loadVideoToPlayer(e.dataTransfer.files[0], videoElement, dropZone);
+        }
+    });
+}
+
+// 양쪽 드롭존 활성화
+setupDropZone(refDropZone, refVideoFile, refVideo);
+setupDropZone(userDropZone, userVideoFile, userVideo);
+
+// 일반 파일 선택 이벤트 연결
 refVideoFile.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) refVideo.src = URL.createObjectURL(file);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], refVideo, refDropZone);
 });
 
 userVideoFile.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) userVideo.src = URL.createObjectURL(file);
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone);
+});
+
+// 모바일 카메라 즉시 촬영 이벤트 연결
+userCameraFile.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadVideoToPlayer(e.target.files[0], userVideo, userDropZone);
 });
 
 // 코사인 유사도 계산 함수
@@ -120,13 +169,11 @@ saveBtn.addEventListener('click', async () => {
             body: JSON.stringify({ groupName: groupName, score: currentScore })
         });
 
-        saveStatus.innerText = `✅ '${groupName}' (${currentScore}점) 저장 완료!`;
-        
-        // 저장이 끝나면 그래프 목록 최신화
+        saveStatus.innerText = `'${groupName}' (${currentScore}점) 저장 완료!`;
         setTimeout(fetchRecordsAndSetupDropdown, 1500);
     } catch (error) {
         console.error("저장 오류:", error);
-        saveStatus.innerText = "❌ 저장 중 오류가 발생했습니다.";
+        saveStatus.innerText = "저장 중 오류가 발생했습니다.";
     } finally {
         saveBtn.disabled = false;
     }
@@ -138,7 +185,6 @@ async function fetchRecordsAndSetupDropdown() {
         const response = await fetch(APPS_SCRIPT_URL);
         allRecords = await response.json();
 
-        // 중복 없는 곡(무리) 이름 추출
         const groups = [...new Set(allRecords.map(r => r.groupName))];
 
         groupSelect.innerHTML = '<option value="">-- 곡을 선택하세요 --</option>';
@@ -153,18 +199,16 @@ async function fetchRecordsAndSetupDropdown() {
     }
 }
 
-// 4. 드롭다운 선택 시 꺾은선 그래프(Chart.js) 업데이트
+// 4. 드롭다운 선택 시 꺾은선 그래프(Chart.js) 업데이트 (다크 테마 보라색 스타일)
 groupSelect.addEventListener('change', (e) => {
     const selectedGroup = e.target.value;
-    
-    // 선택한 곡의 기록만 필터링 (날짜순 정렬)
     const filtered = allRecords.filter(r => r.groupName === selectedGroup);
 
     const labels = filtered.map(r => r.date);
     const scores = filtered.map(r => r.score);
 
     if (scoreChart) {
-        scoreChart.destroy(); // 기존 그래프 파괴 후 재생성
+        scoreChart.destroy();
     }
 
     scoreChart = new Chart(ctx, {
@@ -174,24 +218,35 @@ groupSelect.addEventListener('change', (e) => {
             datasets: [{
                 label: `${selectedGroup} 유사도 점수`,
                 data: scores,
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                borderColor: '#a78bfa',
+                backgroundColor: 'rgba(167, 139, 250, 0.2)',
                 borderWidth: 2,
+                pointBackgroundColor: '#8b5cf6',
                 tension: 0.1,
                 fill: true
             }]
         },
         options: {
             responsive: true,
+            plugins: {
+                legend: {
+                    labels: { color: '#e2e8f0' }
+                }
+            },
             scales: {
+                x: {
+                    ticks: { color: '#94a3b8' },
+                    grid: { color: '#1e293b' }
+                },
                 y: {
                     beginAtZero: true,
-                    max: 100
+                    max: 100,
+                    ticks: { color: '#94a3b8' },
+                    grid: { color: '#334155' }
                 }
             }
         }
     });
 });
 
-// 페이지 접속 시 기록 불러오기 실행
 fetchRecordsAndSetupDropdown();
