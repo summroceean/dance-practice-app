@@ -10,7 +10,7 @@
   <div class="app-container">
     <header class="app-header">
       <h1>안무 유사도 비교 앱</h1>
-      <p>기준 안무 영상과 연습 영상을 업로드하거나 유튜브 링크를 입력해 동작을 비교해보세요.</p>
+      <p>왼쪽에는 유튜브 원본 안무를 띄우고, 오른쪽에는 내 연습 영상을 올려 AI 분석과 스프레드시트 기록을 진행하세요.</p>
     </header>
 
     <!-- 메타데이터 입력 영역 -->
@@ -25,75 +25,64 @@
       </div>
     </section>
 
-    <!-- 듀얼 비디오 업로드 및 뷰어 -->
+    <!-- 좌우 대칭 듀얼 비디오 그리드 -->
     <section class="video-grid">
-      <!-- [왼쪽] 기준 영상 카드 -->
+      
+      <!-- [왼쪽] 유튜브 원본 안무 카드 -->
       <div class="video-card">
         <div class="card-header">
-          <h2>기준 영상 (원본 안무)</h2>
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <!-- 1) 파일 선택 / 스마트폰 카메라 촬영 지원 -->
-            <input type="file" id="refVideoInput" accept="video/*" style="display: none;" />
-            <button type="button" id="refSelectBtn" class="btn secondary" style="padding: 6px 12px; font-size: 0.8rem;">📁 파일 / 촬영</button>
-          </div>
+          <h2>기준 영상 (유튜브 원본)</h2>
+        </div>
+        
+        <!-- 유튜브 링크 입력창 -->
+        <div class="youtube-input-group">
+          <input type="text" id="refYoutubeInput" placeholder="유튜브 링크 입력 (예: https://youtu.be/...)" />
+          <button type="button" id="refYoutubeBtn" class="btn outline">불러오기</button>
         </div>
 
-        <!-- 3) 유튜브 링크 입력창 -->
-        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
-          <input type="text" id="refYoutubeInput" placeholder="유튜브 링크 붙여넣기 (예: https://youtu.be/...)" style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #334155; background: #0b0f19; color: #f8fafc; font-size: 0.82rem;" />
-          <button type="button" id="refYoutubeBtn" class="btn outline" style="padding: 6px 12px; font-size: 0.8rem;">불러오기</button>
-        </div>
-
-        <!-- 2) 드래그 앤 드롭 박스 겸 비디오 뷰어 -->
-        <div class="video-wrapper" id="refDropZone" style="border: 2px dashed #334155; cursor: pointer; transition: border-color 0.2s, background 0.2s;">
-          <video id="refVideo" controls playsinline></video>
+        <div class="video-wrapper">
           <iframe id="refYoutubeFrame" style="width: 100%; height: 100%; border: none; display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-          <div class="placeholder" id="refPlaceholder" style="text-align: center; padding: 16px;">
-            <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">여기로 기준 영상을 끌어다 놓으세요</p>
-            <span style="font-size: 0.78rem; color: #64748b;">또는 클릭하여 파일 선택 / 스마트폰 촬영</span>
+          <div class="placeholder" id="refPlaceholder">
+            <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">유튜브 링크를 입력해 주세요</p>
+            <span style="font-size: 0.78rem; color: #64748b;">재생 플레이어가 이 곳에 나타납니다</span>
           </div>
         </div>
       </div>
 
-      <!-- [오른쪽] 사용자 영상 카드 -->
+      <!-- [오른쪽] 사용자 연습 영상 업로드 카드 -->
       <div class="video-card">
         <div class="card-header">
           <h2>사용자 영상 (연습 영상)</h2>
           <div style="display: flex; gap: 6px; align-items: center;">
-            <!-- 1) 파일 선택 / 스마트폰 카메라 촬영 지원 -->
             <input type="file" id="userVideoInput" accept="video/*" style="display: none;" />
             <button type="button" id="userSelectBtn" class="btn secondary" style="padding: 6px 12px; font-size: 0.8rem;">🎥 촬영 / 파일</button>
           </div>
         </div>
 
-        <!-- 3) 유튜브 링크 입력창 -->
-        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
-          <input type="text" id="userYoutubeInput" placeholder="유튜브 링크 붙여넣기 (예: https://youtu.be/...)" style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #334155; background: #0b0f19; color: #f8fafc; font-size: 0.82rem;" />
-          <button type="button" id="userYoutubeBtn" class="btn outline" style="padding: 6px 12px; font-size: 0.8rem;">불러오기</button>
-        </div>
+        <!-- 빈 공간 채우기용 레이아웃 맞춤형 여백 -->
+        <div style="margin-bottom: 10px; visibility: hidden; height: 35px;">-</div>
 
-        <!-- 2) 드래그 앤 드롭 박스 겸 비디오 뷰어 -->
+        <!-- 드래그 앤 드롭 박스 겸 비디오 뷰어 -->
         <div class="video-wrapper" id="userDropZone" style="border: 2px dashed #334155; cursor: pointer; transition: border-color 0.2s, background 0.2s;">
           <video id="userVideo" controls playsinline></video>
-          <iframe id="userYoutubeFrame" style="width: 100%; height: 100%; border: none; display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
           <div class="placeholder" id="userPlaceholder" style="text-align: center; padding: 16px;">
             <p style="font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">여기로 연습 영상을 끌어다 놓으세요</p>
             <span style="font-size: 0.78rem; color: #64748b;">또는 클릭하여 파일 선택 / 스마트폰 촬영</span>
           </div>
         </div>
       </div>
+
     </section>
 
-    <!-- 컨트롤 버튼 영역 -->
+    <!-- 컨트롤 버튼 영역 (Gemini 분석 및 스프레드시트 연동) -->
     <section class="controls-section">
-      <button id="syncPlayBtn" class="btn secondary" disabled>동시 재생 / 일시정지</button>
-      <button id="analyzeBtn" class="btn primary" disabled>유사도 분석 시작</button>
+      <button id="analyzeBtn" class="btn primary" disabled>유사도 분석 및 시트 저장 시작</button>
     </section>
 
     <!-- 분석 진행 상태 표시 -->
     <section id="loadingSection" class="loading-section hidden">
       <div class="spinner"></div>
-      <p>관절 좌표(Pose) 및 타이밍 데이터를 분석 중입니다...</p>
+      <p>연습 영상을 분석 중입니다...</p>
     </section>
 
     <!-- 분석 결과 대시보드 -->
